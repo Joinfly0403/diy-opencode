@@ -43,7 +43,7 @@ keywords:
   - generate
   - 提交约定
   - prettier
-source_hash: d9b5259b5fbb5b732724245344cd0e6e5ea1df97
+source_hash: 0545a3fcea7c1f4d8d297e43efa348209b223102
 ---
 
 ## 职责

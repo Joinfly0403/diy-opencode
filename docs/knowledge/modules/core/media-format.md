@@ -71,7 +71,7 @@ tests:
   - packages/merman/src/test/markdown.test.ts
   - packages/patchmark/test/patchmark.test.ts
   - packages/patchmark/test/commonmark-spec.test.ts
-source_hash: 87443bc3a9fc181faa1f7a4de8425987c40eaa35
+source_hash: 5981846a42c677cf054ffe47db7f575855392a13
 ---
 
 ## 职责

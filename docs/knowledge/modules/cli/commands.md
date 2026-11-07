@@ -45,7 +45,6 @@ depends_on:
   - runtime/process-lifecycle
   - contracts/httpapi-protocol
 related:
-  - cli/acp-bridge
   - server/event-feed
   - core/mcp-integration
   - core/plugin-system
@@ -59,7 +58,7 @@ keywords:
   - 参数校验
   - 惰性导入
   - 全局 flag
-source_hash: c79e61378b14f613524925961325b89d476f8b64
+source_hash: cdab012462dd2e55d7f1e386ff1fa099975b57c8
 ---
 
 ## 职责

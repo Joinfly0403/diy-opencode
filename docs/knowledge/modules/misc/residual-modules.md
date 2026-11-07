@@ -8,12 +8,10 @@ paths:
   - packages/server/src/fetch.ts
   - packages/server/src/options.ts
   - packages/server/src/media-uri.ts
-  - packages/server/src/workerd.ts
   - packages/tui/src/runtime.tsx
 symbols:
   - ServerOptions
   - ServerFetch
-  - ServerWorkerd
   - wantsMediaRefs
   - abbreviateHome
 related:
@@ -23,10 +21,9 @@ related:
 keywords:
   - server 启动
   - ServerOptions
-  - workerd
   - media refs
   - TUI 挂载
-source_hash: a3278a223a7c7e97291edbaac6542902bb1e0204
+source_hash: 0f11e422e97d0d96e627602a2472cf7769c7d47e
 ---
 
 ## 职责
@@ -38,13 +35,11 @@ source_hash: a3278a223a7c7e97291edbaac6542902bb1e0204
 | `packages/server/src/fetch.ts` | `ServerFetch.make(options, boot)`：把 HttpApi 与路由装成一个 fetch handler（含 boot 阶段注入）；`server/process.ts` 是另一条入口 |
 | `packages/server/src/options.ts` | `ServerOptions` schema：hostname/port/cors/事件持久化等启动参数 |
 | `packages/server/src/media-uri.ts` | `wantsMediaRefs(request)`：决定响应是内联字节还是引用 URL（影响缓存与请求头） |
-| `packages/server/src/workerd.ts` | `ServerWorkerd.create(options)`：Worker 运行时入口，Linux 本地不使用 |
 | `packages/tui/src/runtime.tsx` | TUI 挂载点（渲染器启动/关闭），并 re-export `abbreviateHome` |
 
 ## 边界
 
 - 不做端点实现（在 `server/http-handlers`），不做路由定义（在 `contracts/httpapi-protocol`）。
-- `workerd.ts` 在 Linux 客户端场景不参与运行；保留只为不破坏 `server` 包导出面。
 
 ## 数据与状态
 
@@ -65,7 +60,6 @@ source_hash: a3278a223a7c7e97291edbaac6542902bb1e0204
 ## 常见改法与坑
 
 - `fetch.ts` 与 `process.ts` 是两条启动路径，只改一条会让 serve 与 service 行为不一致。
-- `workerd.ts` 在删掉 Cloudflare 部署后属于死代码，最终清理时一并删除。
 
 ## 代码坐标
 
@@ -74,5 +68,4 @@ source_hash: a3278a223a7c7e97291edbaac6542902bb1e0204
 | `packages/server/src/fetch.ts` | fetch handler 装配 |
 | `packages/server/src/options.ts` | `ServerOptions` |
 | `packages/server/src/media-uri.ts` | `wantsMediaRefs` |
-| `packages/server/src/workerd.ts` | workerd 入口 |
 | `packages/tui/src/runtime.tsx` | TUI 挂载点 |

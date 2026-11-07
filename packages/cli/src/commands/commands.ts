@@ -97,15 +97,6 @@ const Root = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME
         ),
       },
     }),
-    Spec.make("acp", {
-      description: "Start an Agent Client Protocol server",
-      params: {
-        login: Flag.Boolean("login").pipe(
-          Flag.withDescription("Run auth login instead of starting the server"),
-          Flag.withDefault(false),
-        ),
-      },
-    }),
     Spec.make("api", {
       description: "Make a request to the running server",
       globalFlags: ServerFlags,

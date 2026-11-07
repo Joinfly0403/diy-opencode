@@ -3,7 +3,7 @@ import { DateTime, Effect, Fiber, Layer, Option, Schema, Stream } from "effect"
 import { TestClock } from "effect/testing"
 import { and, asc, eq, sql } from "drizzle-orm"
 import { Database } from "@opencode/core/database/database"
-import { sqliteLayer } from "@opencode/core/database/sqlite.workerd"
+import { sqliteLayer } from "@opencode/core/database/sqlite.bun"
 import { Agent } from "@opencode/core/agent"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
@@ -41,7 +41,6 @@ import {
   SessionTable,
 } from "@opencode/core/session/sql"
 import { testEffect } from "./lib/effect"
-import { makeDurableObjectStorage } from "./fixture/durable-object-storage"
 import { Snapshot } from "@opencode/core/snapshot"
 
 const it = testEffect(
@@ -57,7 +56,7 @@ const durableIt = testEffect(
     [
       Bus.node.replace(Bus.configured({ persist: true })),
       Database.node.replace(
-        Database.configuredClient(Layer.suspend(() => sqliteLayer({ storage: makeDurableObjectStorage() }))),
+        Database.configuredClient(Layer.suspend(() => sqliteLayer({ filename: ":memory:", disableWAL: true }))),
       ),
     ],
   ),

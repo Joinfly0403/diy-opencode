@@ -42,8 +42,7 @@ import { offlineModels } from "./fixture/models"
 import { promptLocationNode } from "./fixture/prompt-location"
 import { globalProjectNode } from "./lib/project"
 import { tmpdirScoped } from "./fixture/tmpdir"
-import { makeDurableObjectStorage } from "./fixture/durable-object-storage"
-import { sqliteLayer } from "@opencode/core/database/sqlite.workerd"
+import { sqliteLayer } from "@opencode/core/database/sqlite.bun"
 
 const it = testEffect(
   AppNodeBuilder.build(
@@ -82,7 +81,7 @@ const durableIt = testEffect(
       LocationServiceMap.node.replace(promptLocationNode),
       SessionExecution.node.replace(SessionExecution.noopLayer),
       Database.node.replace(
-        Database.configuredClient(Layer.suspend(() => sqliteLayer({ storage: makeDurableObjectStorage() }))),
+        Database.configuredClient(Layer.suspend(() => sqliteLayer({ filename: ":memory:", disableWAL: true }))),
       ),
     ],
   ),

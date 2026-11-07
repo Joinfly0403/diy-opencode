@@ -2,8 +2,6 @@ import { describe, expect, test } from "bun:test"
 import { Effect, Fiber, Layer, References } from "effect"
 import { SqlClient } from "effect/sql"
 import { sqliteLayer as bunSqliteLayer } from "@opencode/core/database/sqlite.bun"
-import { sqliteLayer as workerdSqliteLayer } from "@opencode/core/database/sqlite.workerd"
-import { makeDurableObjectStorage } from "./fixture/durable-object-storage"
 
 // The holder keeps the connection across yields, so the queued fiber parks in
 // the semaphore's waiter queue and is woken when the holder lets go. The sweep
@@ -68,19 +66,5 @@ describe("sqlite transaction interrupts", () => {
     expect(leaked).toEqual([])
   })
 
-  test("workerd client releases the connection when a queued reserve is interrupted", async () => {
-    const leaked = await sweep(
-      () => workerdSqliteLayer({ storage: makeDurableObjectStorage() }),
-      (sql) => Effect.scoped(Effect.andThen(sql.reserve, Effect.yieldNow)),
-    )
-    expect(leaked).toEqual([])
-  })
 
-  test("workerd client releases the connection when a queued transaction is interrupted", async () => {
-    const leaked = await sweep(
-      () => workerdSqliteLayer({ storage: makeDurableObjectStorage() }),
-      (sql) => sql.withTransaction(sql`SELECT 2`),
-    )
-    expect(leaked).toEqual([])
-  })
 })

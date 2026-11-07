@@ -11,7 +11,7 @@ import { AbsolutePath } from "@opencode/core/schema"
 import { Bus } from "@opencode/core/bus"
 import { DatabaseBatch } from "@opencode/core/database/batch"
 import { Database } from "@opencode/core/database/database"
-import { sqliteLayer } from "@opencode/core/database/sqlite.workerd"
+import { sqliteLayer } from "@opencode/core/database/sqlite.bun"
 import { ProjectTable } from "@opencode/core/project/sql"
 import { SessionMessageTable, SessionPartTable, SessionTable } from "@opencode/core/session/sql"
 import { SessionHistory } from "@opencode/core/session/history"
@@ -20,7 +20,6 @@ import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { DateTime, Effect, Layer, Schema } from "effect"
 import { TestClock } from "effect/testing"
-import { makeDurableObjectStorage } from "./fixture/durable-object-storage"
 import { testEffect } from "./lib/effect"
 
 const it = testEffect(
@@ -32,7 +31,7 @@ const durableIt = testEffect(
   AppNodeBuilder.build(LayerNode.group([Database.node, Bus.node]), [
     Bus.node.replace(Bus.configured({ persist: true })),
     Database.node.replace(
-      Database.configuredClient(Layer.suspend(() => sqliteLayer({ storage: makeDurableObjectStorage() }))),
+      Database.configuredClient(Layer.suspend(() => sqliteLayer({ filename: ":memory:", disableWAL: true }))),
     ),
   ]),
 )

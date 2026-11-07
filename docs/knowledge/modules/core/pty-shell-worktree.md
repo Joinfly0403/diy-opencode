@@ -33,7 +33,7 @@ keywords:
   - git
   - vcs
   - 持久终端
-source_hash: d29759a49b583358181c5ece3939d771a93df381
+source_hash: 70cf8279c904e794dbc495b922a105e44392f877
 ---
 
 ## 职责

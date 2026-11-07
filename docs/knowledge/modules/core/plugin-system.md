@@ -30,7 +30,7 @@ keywords:
   - 激活
   - 热重载
   - gui 插件
-source_hash: b920636644cff6943de1321c63364fe09c963913
+source_hash: d2d016a388e4c49d0a6121450acef3e29a620474
 ---
 
 ## 职责

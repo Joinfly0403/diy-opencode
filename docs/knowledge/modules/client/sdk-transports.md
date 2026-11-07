@@ -30,7 +30,6 @@ symbols:
   - lastAssistantWithUsage
   - EmbeddedHost
   - SdkInstances
-  - WorkerdProfile
   - PromiseSdk
   - Interface
   - layer
@@ -67,7 +66,7 @@ keywords:
   - ensure
   - SSE
   - 嵌入式宿主
-source_hash: e22470342ceaff152637c18b106e877310c8a070
+source_hash: f190db4f16bca59c35272244f65b12362666a0c2
 ---
 
 ## 职责
@@ -131,7 +130,6 @@ SDK:      EmbeddedHost.create(options)                  // sdk/src/internal/host
 - **重连归 Solid 层**：`createClientConnection` 默认 `idleTimeout = defaultIdleTimeout（45s）`、前台静默阈值 `foregroundIdleThreshold（20s）`；`connectTimeout` 2s、`reconnectDelay` 1s、连接历史保留 50 条；`pageLifecycle` 时监听 `pagehide/pageshow/online/visibilitychange` 并在回到前台且静默过久时 `resync`。生成客户端自身不重连。
 - **Solid store**（`solid/data.ts`）：把 API 读取与事件投影进一个 Solid store；失效读取串行重验（旧响应不能盖新的）；重连只做失效，由活跃 UI 决定重新同步什么。`Data` = `ReturnType<typeof createData>`。
 - **SDK 实例**：`instances.key(session)` 必须同步且不初始化插件；key 与 `LocationServiceMap.canonical(session.location)` 一起决定实例；`configure` 只在 cache miss 跑，`idleTimeToLive: Duration.infinity`，实例活到 host 关闭；插件 setup 失败或 ID 与宿主插件冲突 → `Effect.die`（不回落到别的实例，下一次请求可重试）。
-- Workerd：`WorkerdProfile.make` 把配置 JSON 化并取 `ServerWorkerd.serverOptions` / `replacements`，数据库落到注入的 Durable Object storage；两个入口（`@opencode/sdk/workerd`、`@opencode/sdk/workerd/effect`）都接受 `instances`。
 
 ## 关键不变式
 
@@ -147,7 +145,6 @@ SDK:      EmbeddedHost.create(options)                  // sdk/src/internal/host
 - **加一个客户端方法**：先改协议再生成（`protocol/codegen`）；只有在需要"协议之外的编排"时才在 `effect/client.ts` / `promise/client.ts` 里包一层（如 `rpc`、`event.subscribe` 的替身）。
 - **加一个 Solid 能力**：新建 `solid/<name>.ts` 并在 `solid/index.ts` 里 `export *`；如果要读写 store，走 `createData` 暴露的 `session` 等分组，别自己再建缓存。
 - **换传输**：`OpenCode.make` 接受 `baseUrl` + 注入的 `HttpClient`；SDK 就是这样把 `fetch` 换成的 `host.fetch`。嵌入式宿主还可用 `EmbedOptions.overrides`（`LayerNode.Replacements`）替换 Layer。
-- **加一个运行时 profile**：照 `WorkerdProfile` 写一个"选项 → serverOptions + replacements"的适配层，入口只做组合。
 
 ## 常见改法与坑
 
@@ -173,4 +170,3 @@ SDK:      EmbeddedHost.create(options)                  // sdk/src/internal/host
 | `packages/sdk/src/promise.ts`、`src/effect/opencode.ts` | Promise / Effect 两个 SDK 入口 |
 | `packages/sdk/src/internal/host.ts` | `EmbeddedHost`：嵌入式路由 + `OwnedFetch` |
 | `packages/sdk/src/internal/instances.ts` | `SdkInstances`：按 Session 选实例、`LayerMap` 缓存 |
-| `packages/sdk/src/internal/workerd.ts`、`src/workerd.ts`、`src/effect/workerd.ts` | Cloudflare Durable Object profile |

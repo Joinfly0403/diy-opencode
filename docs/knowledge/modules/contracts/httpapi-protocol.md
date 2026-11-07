@@ -32,7 +32,7 @@ keywords:
   - handler
   - sdk 生成
   - experimental
-source_hash: 3cc41f235dfd4cb7154bd03b7c940938cbd3fba4
+source_hash: 5dedac8ca62eccc7d4b91c575dc382edb8c4753d
 ---
 
 ## 职责

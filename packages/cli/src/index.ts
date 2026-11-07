@@ -45,7 +45,6 @@ const Handlers = Runtime.handlers(Commands, {
   $: () => import("./commands/handlers/default"),
   upgrade: () => import("./commands/handlers/upgrade"),
   uninstall: () => import("./commands/handlers/uninstall"),
-  acp: () => import("./commands/handlers/acp"),
   api: () => import("./commands/handlers/api"),
   auth: {
     list: () => import("./commands/handlers/auth/list"),

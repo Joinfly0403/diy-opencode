@@ -2,7 +2,7 @@
 
 > 由 build.ts 生成，不要手改。卡片正文在 modules/ 下，机器事实在 _generated/ 下。
 >
-> 卡片数 44；源文件覆盖 1725/1725。检索顺序：本索引 → 1~3 张卡 → 卡内坐标。
+> 卡片数 42；源文件覆盖 1692/1692。检索顺序：本索引 → 1~3 张卡 → 卡内坐标。
 
 ## L0 骨架层（进程 / 契约 / 存储）
 
@@ -16,7 +16,6 @@
 ## L1 核心能力（会话 / 工具 / 权限 / 模型 / 插件）
 
 - [ai/routing](modules/ai/routing.md) — 请求路由（Route/LLMClient/HttpClient） ｜ 路由、route、请求、HttpClient、重试、压缩、compact、中间件、超时
-- [cli/acp-bridge](modules/cli/acp-bridge.md) — ACP 桥（Agent Client Protocol） ｜ acp、agent client protocol、编辑器集成、stdio、ndjson、会话桥、权限转发
 - [cli/commands](modules/cli/commands.md) — CLI 命令树与 handler 桥接 ｜ cli、命令树、子命令、handler、effect/cli、参数校验、惰性导入、全局 flag
 - [cli/host-glue](modules/cli/host-glue.md) — CLI 宿主胶水（env / 版本 / 数据库路径 / run·mini 宿主 / cli.json） ｜ env、环境变量、版本号、数据库路径、cli.json、迁移、run、mini、宿主、timeline、askpass、资源解包、cpu profile、heap
 - [client/sdk-transports](modules/client/sdk-transports.md) — 客户端三种形态与服务发现 / SDK 宿主 ｜ client、客户端、Effect、Promise、Solid、sdk、服务发现、service.incumbent、ensure、SSE、嵌入式宿主
@@ -48,10 +47,9 @@
 - [ai/generation-media](modules/ai/generation-media.md) — 生成句柄与媒体（图像/媒体资产）入口 ｜ 生成、generation、轮询、图像、媒体、asset、流式、promise、effect、一致性
 - [ai/protocols](modules/ai/protocols.md) — 协议适配层（聊天/图像/语音/转写/视频/决策） ｜ 协议、protocol、流式、SSE、事件映射、终止事件、usage、tool-call、错误形状
 - [ai/providers](modules/ai/providers.md) — Provider 实现与模型工厂 ｜ provider、厂商、模型工厂、鉴权、baseURL、能力、兼容性、models.dev、透传
-- [cli/services-updater](modules/cli/services-updater.md) — 自更新与服务周边（updater / standalone / web-ui / tunnel） ｜ 自更新、updater、upgrade、版本检查、安装方式、standalone、web ui、远程隧道、端口占用、硬链接
 - [core/media-format](modules/core/media-format.md) — 格式化、图像与渲染适配 ｜ formatter、格式化、prettier、lsp、图像、缩放、photon、latex、mermaid、markdown、渲染、终端
 - [core/skill-system](modules/core/skill-system.md) — 技能系统（SKILL.md 发现与注入） ｜ skill、技能、SKILL.md、提示词、发现、catalog、autoinvoke
-- [misc/residual-modules](modules/misc/residual-modules.md) — server 启动层与 TUI 挂载点 ｜ server 启动、ServerOptions、workerd、media refs、TUI 挂载
+- [misc/residual-modules](modules/misc/residual-modules.md) — server 启动层与 TUI 挂载点 ｜ server 启动、ServerOptions、media refs、TUI 挂载
 - [schema/v1-compat](modules/schema/v1-compat.md) — V1 兼容层与旧数据迁移 ｜ V1、兼容层、迁移、migration、legacy、旧库、删除时机
 - [tui/feature-plugins](modules/tui/feature-plugins.md) — TUI 插件体系与内置功能插件 ｜ 插件、plugin、slot、插槽、路由、热重载、storybook、内置插件、贡献点
 - [tui/mini](modules/tui/mini.md) — 精简 TUI（mini） ｜ mini、精简、手机、嵌入式、分屏页脚、split-footer、scrollback、传输、SSE、队列、demo
@@ -62,7 +60,7 @@
 - .opencode/plugins → [core/plugin-system](modules/core/plugin-system.md)
 - .opencode/skills → [core/skill-system](modules/core/skill-system.md)
 - packages/ai → [ai/generation-media](modules/ai/generation-media.md)、[ai/protocols](modules/ai/protocols.md)、[ai/providers](modules/ai/providers.md)、[ai/routing](modules/ai/routing.md)、[core/provider-models](modules/core/provider-models.md)
-- packages/cli → [cli/acp-bridge](modules/cli/acp-bridge.md)、[cli/commands](modules/cli/commands.md)、[cli/host-glue](modules/cli/host-glue.md)、[cli/services-updater](modules/cli/services-updater.md)、[runtime/process-lifecycle](modules/runtime/process-lifecycle.md)、[tui/mini](modules/tui/mini.md)
+- packages/cli → [cli/commands](modules/cli/commands.md)、[cli/host-glue](modules/cli/host-glue.md)、[runtime/process-lifecycle](modules/runtime/process-lifecycle.md)、[tui/mini](modules/tui/mini.md)
 - packages/client → [client/sdk-transports](modules/client/sdk-transports.md)、[contracts/httpapi-protocol](modules/contracts/httpapi-protocol.md)、[protocol/codegen](modules/protocol/codegen.md)
 - packages/codemode → [codemode/runtime](modules/codemode/runtime.md)、[codemode/tool-surface](modules/codemode/tool-surface.md)
 - packages/core → [contracts/config-flag](modules/contracts/config-flag.md)、[contracts/events-db](modules/contracts/events-db.md)、[core/background-jobs](modules/core/background-jobs.md)、[core/core-facades](modules/core/core-facades.md)、[core/credential-oauth](modules/core/credential-oauth.md)、[core/location-instance](modules/core/location-instance.md)、[core/mcp-integration](modules/core/mcp-integration.md)、[core/media-format](modules/core/media-format.md)、[core/permission-policy](modules/core/permission-policy.md)、[core/platform-foundations](modules/core/platform-foundations.md)、[core/plugin-system](modules/core/plugin-system.md)、[core/provider-models](modules/core/provider-models.md)、[core/pty-shell-worktree](modules/core/pty-shell-worktree.md)、[core/session-execution](modules/core/session-execution.md)、[core/skill-system](modules/core/skill-system.md)、[core/tool-registry](modules/core/tool-registry.md)、[schema/v1-compat](modules/schema/v1-compat.md)
@@ -111,7 +109,6 @@
 - `attention.sounds` → [tui/util-runtime](modules/tui/util-runtime.md)
 - `attention.volume` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
 - `attention.volume` → [tui/util-runtime](modules/tui/util-runtime.md)
-- `autoupdate` → [cli/services-updater](modules/cli/services-updater.md)
 - `cors` → [server/auth-pairing](modules/server/auth-pairing.md)
 - `cursor.blinking` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
 - `cursor.style` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
@@ -154,7 +151,6 @@
 - `terminal.copy` → [cli/host-glue](modules/cli/host-glue.md)
 - `theme.mode` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
 - `theme.name` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
-- `update` → [cli/services-updater](modules/cli/services-updater.md)
 
 ## 按 HTTP 端点找
 
@@ -183,11 +179,9 @@
 - `OpenAIChat`、`AnthropicMessages`、`BedrockConverse`、`CohereChat`、`AlibabaChat`、`OpenResponses`、`Gemini`、`MistralChat`、`ProviderShared`、`Lifecycle`、`ToolStream`、`BedrockEventStream` → [ai/protocols](modules/ai/protocols.md)
 - `ProviderPackage`、`LanguageModel`、`LanguageModelCompatibility`、`Capabilities`、`ProviderOptions`、`mergeProviderOptions`、`bearerRouteDefaults`、`toConfig`、`OpenAIOptionsInput`、`ProviderID`、`DeepSeek`、`Anthropic` → [ai/providers](modules/ai/providers.md)
 - `Route`、`LLMClient`、`RequestExecutor`、`Auth`、`Endpoint`、`Framing`、`HttpTransport`、`Protocol`、`StreamOptions`、`CompactionOperations`、`canCompact`、`compileRequest` → [ai/routing](modules/ai/routing.md)
-- `ACP`、`ACPService`、`ACPConnection`、`ACPSessions`、`ACPTurn`、`ACPPermission`、`ACPElicitation`、`ACPReplay`、`ACPCapabilities`、`ACPCatalog`、`ACPClient`、`ACPError`、`ACPChild`、`ACPTranslate`、`ACPDirectories`、`ACPPrompt`、`Standalone` → [cli/acp-bridge](modules/cli/acp-bridge.md)
 - `Commands`、`PrintLogs`、`Standalone`、`Server`、`Spec`、`Runtime`、`CliFlag`、`resolveOperation`、`remoteConsent`、`remoteWarning`、`createClient`、`inspect` → [cli/commands](modules/cli/commands.md)
 - `Env`、`password`、`OPENCODE_VERSION`、`OPENCODE_CHANNEL`、`OPENCODE_ARTIFACT`、`OPENCODE_HIGHLIGHTS`、`OPENCODE_LOCAL`、`databasePath`、`Heap`、`CpuProfile`、`MiniCommandInput`、`runMini`、`createMiniConnection`、`resolveMiniTarget`、`validateMiniTerminal`、`InteractiveStdin`、`INTERACTIVE_INPUT_ERROR`、`createMiniHost`、`resolveInteractiveStdin`、`usingInteractiveStdin`、`SessionTarget`、`SessionTargetMutationError`、`SessionTargetPreparation`、`resolveSessionTarget`、`createWorktreeLocation`、`findSession`、`parseSessionTargetModel`、`RunCommandInput`、`runNonInteractive`、`mergeInput`、`parseRunModel`、`reportRunError`、`runNonInteractivePrompt`、`Style`、`UI`、`println`、`TimelineHost`、`createTimelineHost`、`IntegrationChoice`、`selectIntegration`、`handlePromptErrors`、`openUrl`、`requireInteractive`、`errorMessage`、`readStdin`、`readStdinIfReady`、`selfCommand`、`NodeTarget`、`nodeTarget`、`nodeExecArgv`、`photonWasmAsset`、`attentionSoundAssets`、`Config`、`ConfigMigration`、`migrateV1`、`Info`、`SchemaURL`、`normalizeLegacyTabs`、`ShutdownDeadline`、`DEADLINE`、`askpass` → [cli/host-glue](modules/cli/host-glue.md)
-- `Updater`、`Service`、`UpgradeError`、`RunResult`、`action`、`parseReleaseVersion`、`decodePolicy`、`methods`、`UpdatePreflight`、`Handle`、`RetainedImage`、`retain`、`relocate`、`installed`、`Standalone`、`start`、`PortOwner`、`describe`、`RemoteTunnel`、`ensure`、`hostname`、`ServiceRegistration`、`register`、`ServerConnection`、`resolve`、`Resolved`、`Args` → [cli/services-updater](modules/cli/services-updater.md)
-- `OpenCode`、`make`、`Service`、`discover`、`incumbent`、`ensure`、`stop`、`Info`、`SharedEvents`、`createData`、`Data`、`createClientConnection`、`defaultIdleTimeout`、`createPersistentPtyClient`、`decodePersistentPtyMessage`、`createSessionRetention`、`lastAssistantWithUsage`、`EmbeddedHost`、`SdkInstances`、`WorkerdProfile`、`PromiseSdk`、`Interface`、`layer`、`create` → [client/sdk-transports](modules/client/sdk-transports.md)
+- `OpenCode`、`make`、`Service`、`discover`、`incumbent`、`ensure`、`stop`、`Info`、`SharedEvents`、`createData`、`Data`、`createClientConnection`、`defaultIdleTimeout`、`createPersistentPtyClient`、`decodePersistentPtyMessage`、`createSessionRetention`、`lastAssistantWithUsage`、`EmbeddedHost`、`SdkInstances`、`PromiseSdk`、`Interface`、`layer`、`create` → [client/sdk-transports](modules/client/sdk-transports.md)
 - `VmEngine`、`Vm`、`Interpreter`、`startProgram`、`resumeProgram`、`finishExecution`、`Running`、`toBytes`、`fromBytes`、`SnapshotError`、`fromJson`、`MAX_PENDING_PROMISES`、`MAX_VALUE_DEPTH`、`globalNames`、`extensionGlobals` → [codemode/runtime](modules/codemode/runtime.md)
 - `CodeMode`、`Extension`、`Namespace`、`OpenAPI`、`Tool`、`ToolError`、`toolError`、`SuspendError`、`SnapshotError`、`toBytes`、`fromBytes`、`searchSignature`、`toolExpression`、`Services`、`isAsync`、`make`、`isTool`、`isNamespace`、`JsonSchema`、`SchemaType`、`Tools`、`toTypeScript`、`jsonSchemaToTypeScript`、`inputProperties`、`inputTypeScript`、`outputTypeScript`、`isEmptyInput`、`decodeInput`、`decodeOutput`、`identifierSegment`、`scanTools`、`fromSpec`、`invoke`、`operationPath`、`operationInput`、`operationOutput`、`specServerUrl`、`validateBaseUrl`、`securitySchemes`、`securityRequirements`、`componentDefinitions`、`hasDirectionalSchemas`、`methods`、`Plan`、`Skipped`、`Credential`、`SecurityScheme`、`AuthResolver`、`arrayGlobal`、`callbackMethods`、`stringGlobal`、`mapGlobal`、`setGlobal`、`weakMapGlobal`、`weakSetGlobal`、`groupBy`、`iteratorGlobals`、`consoleGlobal`、`formatValue`、`dateGlobal`、`regexpGlobal`、`jsonGlobal`、`mathGlobal`、`numberGlobal`、`booleanGlobal`、`objectGlobal`、`objectAssign`、`enumerableSource`、`uint8ArrayGlobal`、`textEncoderGlobal`、`textDecoderGlobal`、`TextDecoderObj`、`headersGlobal`、`urlGlobal`、`urlSearchParamsGlobal`、`uriGlobal`、`base64Global`、`structuredCloneGlobal`、`cryptoGlobal`、`coerce`、`coercion`、`compoundOperators`、`Coercion` → [codemode/tool-surface](modules/codemode/tool-surface.md)
 - `Config`、`Flag`、`Service`、`resolve`、`latest` → [contracts/config-flag](modules/contracts/config-flag.md)
@@ -207,7 +201,7 @@
 - `Session`、`Service`、`terminal`、`serialized`、`find` → [core/session-execution](modules/core/session-execution.md)
 - `Skill`、`SkillDiscovery`、`SkillInstructions`、`SkillTool`、`SkillScan`、`SkillFile`、`ConfigSkillPlugin`、`ConfigCompatibilityPlugin`、`available`、`toModelOutput`、`prepare`、`isSafeSegment`、`isSafeRelativePath`、`DirectorySource`、`EmbeddedSource`、`UrlSource`、`Plugin` → [core/skill-system](modules/core/skill-system.md)
 - `Tool`、`RegistrationError`、`Editor`、`definition`、`execute`、`effectiveName` → [core/tool-registry](modules/core/tool-registry.md)
-- `ServerOptions`、`ServerFetch`、`ServerWorkerd`、`wantsMediaRefs`、`abbreviateHome` → [misc/residual-modules](modules/misc/residual-modules.md)
+- `ServerOptions`、`ServerFetch`、`wantsMediaRefs`、`abbreviateHome` → [misc/residual-modules](modules/misc/residual-modules.md)
 - `compile`、`emitEffect`、`emitEffectImported`、`emitEffectShape`、`emitPromise`、`write`、`generate`、`GenerationError`、`Contract`、`Output`、`Alias`、`stabilizeOpenApi` → [protocol/codegen](modules/protocol/codegen.md)
 - `ServerProcess`、`ShutdownDeadline`、`ServiceConfig`、`PortOwner`、`ServerConnection`、`RemoteTunnel`、`RetainedImage`、`ServiceRegistration` → [runtime/process-lifecycle](modules/runtime/process-lifecycle.md)
 - `Identifier`、`ascending`、`descending`、`SessionID`、`ProjectID`、`WorkspaceID`、`AbsolutePath`、`RelativePath`、`optional`、`statics`、`withStatics`、`DateTimeUtcFromMillis`、`Event`、`durable`、`ephemeral`、`inventory`、`latest`、`versionedType`、`durableMap`、`Location`、`Permission`、`Tool`、`Session`、`SessionMessage`、`Prompt`、`PromptInput` → [schema/core-model](modules/schema/core-model.md)
@@ -228,11 +222,11 @@
 
 | 目录 | 源文件 | 未归属 |
 | --- | --- | --- |
-| `packages/util` | 45 | 0 |
+| `packages/util` | 43 | 0 |
 | `packages/tui` | 299 | 0 |
 | `packages/theme` | 11 | 0 |
-| `packages/server` | 60 | 0 |
-| `packages/sdk` | 15 | 0 |
+| `packages/server` | 59 | 0 |
+| `packages/sdk` | 12 | 0 |
 | `packages/schema` | 107 | 0 |
 | `packages/protocol` | 43 | 0 |
 | `packages/plugin` | 64 | 0 |
@@ -242,9 +236,9 @@
 | `packages/httpapi-codegen` | 1 | 0 |
 | `packages/http-recorder` | 14 | 0 |
 | `packages/function` | 3 | 0 |
-| `packages/core` | 493 | 0 |
+| `packages/core` | 487 | 0 |
 | `packages/codemode` | 105 | 0 |
 | `packages/client` | 28 | 0 |
-| `packages/cli` | 112 | 0 |
+| `packages/cli` | 91 | 0 |
 | `packages/ai` | 247 | 0 |
 
