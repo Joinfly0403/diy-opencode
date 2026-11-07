@@ -14,7 +14,7 @@ import { NetAddress } from "effect/net"
 import { Env } from "./env"
 import { PortOwner } from "./services/port-owner"
 import { ServiceConfig } from "./services/service-config"
-import { RetainedImage } from "./services/retained-image"
+
 import { ServiceRegistration } from "./services/service-registration"
 import { RemoteTunnel } from "./services/remote-tunnel"
 import { databasePath } from "./database-path"
@@ -77,9 +77,6 @@ const processEffect = Effect.fnUntraced(function* (options: Options) {
       if (findIncumbent !== undefined && (yield* findIncumbent) !== undefined) return
       // Desktop can launch the service directly without injecting its saved environment.
       Object.assign(process.env, ServiceConfig.processEnv(config.env))
-      // Keep a package-manager or curl install replaceable while the service runs; Desktop updates its own copy.
-      if (options.mode === "service" && process.platform === "win32" && RetainedImage.installed(global.home))
-        yield* RetainedImage.retain(global.cache, "service")
       const { start } = yield* Effect.promise(() => import("@opencode/server/process"))
       const environmentPassword = yield* Env.password
       // Keep the lease credential out of the environment inherited by tools.
@@ -128,9 +125,6 @@ const processEffect = Effect.fnUntraced(function* (options: Options) {
             ),
             file: process.env.OPENCODE_CONFIG,
             content: process.env.OPENCODE_CONFIG_CONTENT,
-          },
-          windows: {
-            gitbash: process.env.OPENCODE_GIT_BASH_PATH,
           },
           fs: {
             filewatcher: !truthy(process.env.OPENCODE_FILEWATCHER_DISABLE ?? process.env.OPENCODE_DISABLE_FILEWATCHER),

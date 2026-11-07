@@ -28,8 +28,7 @@ entry_cli:
   - run
   - serve
   - mini
-  - acp
-  - api
+    - api
   - pair
   - stats
   - models
@@ -40,8 +39,7 @@ entry_cli:
   - plugin add
   - service start
   - debug paths
-  - upgrade
-depends_on:
+  depends_on:
   - runtime/process-lifecycle
   - contracts/httpapi-protocol
 related:
@@ -58,7 +56,7 @@ keywords:
   - 参数校验
   - 惰性导入
   - 全局 flag
-source_hash: cdab012462dd2e55d7f1e386ff1fa099975b57c8
+source_hash: 1faa125c1d9a67b1988379aaaa99674083b19512
 ---
 
 ## 职责

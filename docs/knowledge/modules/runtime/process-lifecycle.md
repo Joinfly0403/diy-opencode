@@ -19,7 +19,6 @@ symbols:
   - PortOwner
   - ServerConnection
   - RemoteTunnel
-  - RetainedImage
   - ServiceRegistration
 entry_cli:
   - run
@@ -46,7 +45,7 @@ keywords:
   - service
   - 端口
   - mini
-source_hash: d60225d0ac2e0b30aa7e04b3239f51bb89812db2
+source_hash: 44ae94cd0bead71d9579f854d27747d3767209a0
 ---
 
 ## 职责
@@ -57,7 +56,7 @@ CLI 进程的唯一入口：解析命令、装配 Effect 运行环境、把进�
 | --- | --- | --- |
 | `default`（前台） | `opencode run` / TUI / `serve` | 进程即产品，退出即结束 |
 | `service`（后台） | `opencode service start` | 常驻，注册到 `Service.Info` 文件，端口/密码/远程隧道由 `ServiceConfig` 决定 |
-| `stdio` | 由上游宿主拉起（desktop/acp） | 删除 `OPENCODE_PASSWORD`，密码走 stdio 租约，不落环境变量 |
+| `stdio` | 由上游宿主拉起 | 删除 `OPENCODE_PASSWORD`，密码走 stdio 租约，不落环境变量 |
 
 ## 边界
 

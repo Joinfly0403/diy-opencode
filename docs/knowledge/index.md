@@ -2,7 +2,7 @@
 
 > 由 build.ts 生成，不要手改。卡片正文在 modules/ 下，机器事实在 _generated/ 下。
 >
-> 卡片数 42；源文件覆盖 1692/1692。检索顺序：本索引 → 1~3 张卡 → 卡内坐标。
+> 卡片数 42；源文件覆盖 1684/1684。检索顺序：本索引 → 1~3 张卡 → 卡内坐标。
 
 ## L0 骨架层（进程 / 契约 / 存储）
 
@@ -203,7 +203,7 @@
 - `Tool`、`RegistrationError`、`Editor`、`definition`、`execute`、`effectiveName` → [core/tool-registry](modules/core/tool-registry.md)
 - `ServerOptions`、`ServerFetch`、`wantsMediaRefs`、`abbreviateHome` → [misc/residual-modules](modules/misc/residual-modules.md)
 - `compile`、`emitEffect`、`emitEffectImported`、`emitEffectShape`、`emitPromise`、`write`、`generate`、`GenerationError`、`Contract`、`Output`、`Alias`、`stabilizeOpenApi` → [protocol/codegen](modules/protocol/codegen.md)
-- `ServerProcess`、`ShutdownDeadline`、`ServiceConfig`、`PortOwner`、`ServerConnection`、`RemoteTunnel`、`RetainedImage`、`ServiceRegistration` → [runtime/process-lifecycle](modules/runtime/process-lifecycle.md)
+- `ServerProcess`、`ShutdownDeadline`、`ServiceConfig`、`PortOwner`、`ServerConnection`、`RemoteTunnel`、`ServiceRegistration` → [runtime/process-lifecycle](modules/runtime/process-lifecycle.md)
 - `Identifier`、`ascending`、`descending`、`SessionID`、`ProjectID`、`WorkspaceID`、`AbsolutePath`、`RelativePath`、`optional`、`statics`、`withStatics`、`DateTimeUtcFromMillis`、`Event`、`durable`、`ephemeral`、`inventory`、`latest`、`versionedType`、`durableMap`、`Location`、`Permission`、`Tool`、`Session`、`SessionMessage`、`Prompt`、`PromptInput` → [schema/core-model](modules/schema/core-model.md)
 - `SessionV1`、`PermissionV1`、`FileSystemV1`、`LegacyEventV1`、`ConfigAgentV1`、`ConfigCommandV1`、`ConfigMCPV1`、`ConfigPermissionV1`、`ConfigPluginV1`、`ConfigProviderV1`、`ConfigMigrateV1`、`normalizeAction`、`migrateAgent`、`V1Migration`、`transformSession`、`SourceMessage`、`Status`、`Warning` → [schema/v1-compat](modules/schema/v1-compat.md)
 - `ServerAuth`、`ServerPairing`、`ContentHeaders`、`CONTENT_SECURITY_POLICY`、`disposition`、`CorsConfig`、`isAllowedCorsOrigin`、`isAllowedRequestOrigin`、`RequestSite`、`rejected`、`authorizationLayer`、`authorizedRequest`、`unauthorizedResponse`、`schemaErrorLayer`、`SessionLocationMiddleware`、`FormLocationMiddleware`、`sessionLocationLayer`、`formLocationLayer`、`SESSION_TTL_SECONDS`、`issueSession`、`verifySession`、`sessionCookieName`、`authorized`、`required`、`ServerProcess` → [server/auth-pairing](modules/server/auth-pairing.md)
@@ -223,7 +223,7 @@
 | 目录 | 源文件 | 未归属 |
 | --- | --- | --- |
 | `packages/util` | 43 | 0 |
-| `packages/tui` | 299 | 0 |
+| `packages/tui` | 297 | 0 |
 | `packages/theme` | 11 | 0 |
 | `packages/server` | 59 | 0 |
 | `packages/sdk` | 12 | 0 |
@@ -239,6 +239,6 @@
 | `packages/core` | 487 | 0 |
 | `packages/codemode` | 105 | 0 |
 | `packages/client` | 28 | 0 |
-| `packages/cli` | 91 | 0 |
+| `packages/cli` | 85 | 0 |
 | `packages/ai` | 247 | 0 |
 

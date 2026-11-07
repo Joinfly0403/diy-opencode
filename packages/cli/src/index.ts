@@ -7,7 +7,7 @@ import { defaultTeardown, getErrorReported } from "effect/Runtime"
 import { Commands } from "./commands/commands"
 import { Runtime } from "./framework/runtime"
 import { Observability } from "@opencode/util/observability"
-import { Updater } from "./services/updater"
+
 import { OPENCODE_ARTIFACT, OPENCODE_CHANNEL, OPENCODE_LOCAL, OPENCODE_VERSION } from "./version"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Global } from "@opencode/util/global"
@@ -43,8 +43,6 @@ let terminated = false
 
 const Handlers = Runtime.handlers(Commands, {
   $: () => import("./commands/handlers/default"),
-  upgrade: () => import("./commands/handlers/upgrade"),
-  uninstall: () => import("./commands/handlers/uninstall"),
   api: () => import("./commands/handlers/api"),
   auth: {
     list: () => import("./commands/handlers/auth/list"),
@@ -136,7 +134,6 @@ Effect.gen(function* () {
   ),
   Effect.annotateLogs({ role: "cli" }),
   Effect.provide(Config.layer),
-  Effect.provide(Updater.layer),
   Effect.provide(
     LayerNode.compile(LayerNode.group([Global.node, AppProcess.node, Npm.node, EffectFlock.node]), {
       replacements: [

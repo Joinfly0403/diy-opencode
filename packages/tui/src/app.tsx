@@ -96,7 +96,6 @@ import { openUrl } from "@opencode/util/open"
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
 import { Config, ConfigProvider, useConfig } from "./config"
 import { newSessionLocation } from "./config/new-session-location"
-import { UpdateNotificationProvider, useUpdateNotification, type UpdateSource } from "./context/update-notification"
 import { PluginProvider, usePlugin, type PackageSource } from "./plugin/context"
 import { localPluginDirectories } from "./plugin/discovery"
 import { PluginRoute, Slot } from "./plugin/render"
@@ -196,7 +195,6 @@ export type TuiInput = {
   }
   args: Args
   config: Config.Interface
-  updater?: UpdateSource
   packages: PackageSource
   environment?: Readonly<Record<string, string>>
   terminalHandoff?: () => Promise<
@@ -423,9 +421,6 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                                                     <PromptRefProvider>
                                                                       <EditorContextProvider>
                                                                         <AttentionProvider>
-                                                                          <UpdateNotificationProvider
-                                                                            updater={input.updater}
-                                                                          >
                                                                             <PanelProvider>
                                                                               <PluginProvider
                                                                                 packages={input.packages}
@@ -434,7 +429,6 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                                                                 <App />
                                                                               </PluginProvider>
                                                                             </PanelProvider>
-                                                                          </UpdateNotificationProvider>
                                                                         </AttentionProvider>
                                                                       </EditorContextProvider>
                                                                     </PromptRefProvider>
@@ -501,7 +495,6 @@ function App() {
   const event = useEvent()
   const client = useClient()
   const toast = useToast()
-  const updater = useUpdateNotification()
   const theme = useTheme()
   const { mode, supports, setMode, locked, lock, unlock, afterPaint } = useThemes()
   const data = useData()
@@ -1055,17 +1048,6 @@ function App() {
         },
         category: "System",
       },
-      ...(updater.open
-        ? [
-            {
-              name: "opencode.update",
-              title: "Update OpenCode",
-              slash: { name: "update" },
-              run: () => updater.open?.("manual"),
-              category: "System",
-            },
-          ]
-        : []),
       {
         name: "server.pair",
         title: "Pair device",
