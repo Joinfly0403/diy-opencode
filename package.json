@@ -24,6 +24,8 @@
     "typecheck": "bun turbo typecheck --concurrency=3",
     "typecheck:tsc": "bun turbo typecheck:tsc --concurrency=3",
     "check": "bun run lint && bun run typecheck",
+    "knowledge": "bun script/knowledge/build.ts",
+    "knowledge:bless": "bun script/knowledge/build.ts --bless",
     "typecheck:profile": "bun script/profile-typecheck.ts",
     "typecheck:profile:packages": "bun script/profile-typecheck-packages.ts",
     "pack": "bun run script/pack.ts",
