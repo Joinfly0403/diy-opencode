@@ -2,7 +2,7 @@
 
 > 由 build.ts 生成，不要手改。卡片正文在 modules/ 下，机器事实在 _generated/ 下。
 >
-> 卡片数 67；源文件覆盖 4084/4419。检索顺序：本索引 → 1~3 张卡 → 卡内坐标。
+> 卡片数 75；源文件覆盖 4419/4419。检索顺序：本索引 → 1~3 张卡 → 卡内坐标。
 
 ## L0 骨架层（进程 / 契约 / 存储）
 
@@ -17,14 +17,20 @@
 
 - [ai/routing](modules/ai/routing.md) — 请求路由（Route/LLMClient/HttpClient） ｜ 路由、route、请求、HttpClient、重试、压缩、compact、中间件、超时
 - [app/composer](modules/app/composer.md) — 输入区与新建会话（附件、@ 引用、模型选择、发送） ｜ 输入框、composer、附件、粘贴图片、@ 引用、slash 命令、模型选择、agent、发送、steer、队列、新建会话、worktree
+- [app/home](modules/app/home.md) — 首页（工作区选择、最近会话、新建会话与空态） ｜ 首页、home、工作区、项目选择、最近会话、recent sessions、新建会话、空态、会话搜索、分组、today、长按、重命名、归档、ScrollView、命令面板
+- [app/providers-usage](modules/app/providers-usage.md) — 模型供应商目录、连接流程、用量面板与组件实验室 ｜ provider、供应商、模型选择、model picker、variant、连接、connect、API key、登录、MCP、usage、用量、预算、budget、Console、Go 额度、components lab、组件实验室、storybook、knobs
 - [app/runtime](modules/app/runtime.md) — 前端运行时（server 连接、持久化、插件宿主） ｜ 运行时、server 连接、重连、事件订阅、SSE、持久化、localStorage、状态机、GUI 插件、请求队列
 - [app/session-chat](modules/app/session-chat.md) — 会话视图（时间线、虚拟化、请求 dock） ｜ 会话、session、时间线、虚拟化、滚动、流式、权限、提问、steer、队列、路由、反转
+- [app/shell](modules/app/shell.md) — 应用外壳（布局、标签页、命令面板与通知） ｜ 外壳、shell、布局、titlebar、标签页、tabs、命令面板、palette、keybind、通知、toast、inbox、侧栏、sidebar、面板动效、错误页、路由
 - [app/workspaces-servers](modules/app/workspaces-servers.md) — 多工作区与多服务器（Location 上下文、server 注册表、连接态） ｜ 工作区、workspace、worktree、项目、Location、多服务器、server 注册表、连接态、配对、目录选择
 - [cli/acp-bridge](modules/cli/acp-bridge.md) — ACP 桥（Agent Client Protocol） ｜ acp、agent client protocol、编辑器集成、stdio、ndjson、会话桥、权限转发
 - [cli/commands](modules/cli/commands.md) — CLI 命令树与 handler 桥接 ｜ cli、命令树、子命令、handler、effect/cli、参数校验、惰性导入、全局 flag
+- [cli/host-glue](modules/cli/host-glue.md) — CLI 宿主胶水（env / 版本 / 数据库路径 / run·mini 宿主 / cli.json） ｜ env、环境变量、版本号、数据库路径、cli.json、迁移、run、mini、宿主、timeline、askpass、资源解包、cpu profile、heap
 - [client/sdk-transports](modules/client/sdk-transports.md) — 客户端三种形态与服务发现 / SDK 宿主 ｜ client、客户端、Effect、Promise、Solid、sdk、服务发现、service.incumbent、ensure、SSE、嵌入式宿主
 - [codemode/runtime](modules/codemode/runtime.md) — CodeMode JS 执行内核（VM 与解释器） ｜ codemode、沙箱、解释器、字节码、vm、快照、挂起、限制、诊断
+- [codemode/tool-surface](modules/codemode/tool-surface.md) — Code Mode 对外表面（标准库 / 工具与命名空间 / OpenAPI / 错误类型） ｜ codemode、标准库、stdlib、Value、Obj、openapi、命名空间、namespace、extension、fetch、签名、类型渲染、ToolError、SuspendError
 - [core/background-jobs](modules/core/background-jobs.md) — 后台任务与定时调度 ｜ 后台任务、job、background、定时、schedule、cron、leader、恢复
+- [core/core-facades](modules/core/core-facades.md) — core 顶层门面模块（未单独成卡的服务与单例） ｜ core 顶层、门面、服务、agent、snapshot、state、kv、websearch、指令发现
 - [core/credential-oauth](modules/core/credential-oauth.md) — 凭据存储与 OAuth 接入 ｜ 凭据、credential、oauth、登录、integration、令牌、refresh、copilot、console
 - [core/mcp-integration](modules/core/mcp-integration.md) — MCP 集成 ｜ mcp、model context protocol、服务器、stdio、oauth、工具发现
 - [core/permission-policy](modules/core/permission-policy.md) — 权限与策略 ｜ 权限、permission、审批、ruleset、allow、deny、ask、无人值守
@@ -47,6 +53,7 @@
 - [tui/prompt-editor](modules/tui/prompt-editor.md) — 输入框、编辑器与提交（steer / queue） ｜ 输入框、prompt、提交、steer、queue、粘贴、附件、mention、slash、编辑器、草稿、历史
 - [tui/routes-shell](modules/tui/routes-shell.md) — TUI 路由与外壳 ｜ TUI、路由、页面栈、会话、快捷键、keymap、标签页、滚动、虚拟化、挂载预算
 - [tui/theme-keybinds](modules/tui/theme-keybinds.md) — 主题 token 与 keybind 配置 ｜ 主题、theme、token、亮暗、自定义主题、回退、keybind、快捷键配置、leader、config
+- [tui/util-runtime](modules/tui/util-runtime.md) — TUI 运行时工具（宽度/格式化、剪贴板、提示音、外部编辑器、模型偏好、parsers） ｜ 工具函数、util、string-width、宽度、locale、剪贴板、clipboard、提示音、attention、通知、编辑器、EDITOR、Zed、模型偏好、model preference、parsers、tree-sitter、devtools、bun、node
 
 ## L2 能力面（客户端 / 界面 / 扩展 / 周边）
 
@@ -72,6 +79,7 @@
 - [gui/updater](modules/gui/updater.md) — 应用更新与 What's New ｜ 更新、updater、升级、electron-updater、What's New、发行说明、release notes、beta、安装
 - [gui/wsl](modules/gui/wsl.md) — WSL 发行版里的服务 ｜ WSL、Windows、发行版、distro、sidecar、wsl.exe、安装、服务
 - [infra/misc-packages](modules/infra/misc-packages.md) — 小包与配套服务（script / figma 插件 / browser 插件 / update 服务） ｜ 发布脚本、pack、figma、browser 插件、update 服务、更新清单
+- [misc/residual-modules](modules/misc/residual-modules.md) — 零散模块（session-ui 文档层 / server 启动层 / UI 动效 / textjs / 类型守卫） ｜ session-ui 文档层、server 启动、motion tuning、textjs、类型守卫、workerd
 - [schema/v1-compat](modules/schema/v1-compat.md) — V1 兼容层与旧数据迁移 ｜ V1、兼容层、迁移、migration、legacy、旧库、删除时机
 - [services/docs-site](modules/services/docs-site.md) — 官网与文档站（services/site） ｜ 文档、官网、opencode.ai、docs、llms.txt、站点、cloudflare worker
 - [services/host](modules/services/host.md) — 独立部署服务（公开文件 files / 更新清单 update） ｜ Cloudflare Worker、R2、D1、wrangler、发布服务、更新清单、灰度、最低版本、OIDC、Range
@@ -87,14 +95,14 @@
 - .opencode/skills → [core/skill-system](modules/core/skill-system.md)
 - infra/stats.ts → [stats/usage](modules/stats/usage.md)
 - packages/ai → [ai/generation-media](modules/ai/generation-media.md)、[ai/protocols](modules/ai/protocols.md)、[ai/providers](modules/ai/providers.md)、[ai/routing](modules/ai/routing.md)、[core/provider-models](modules/core/provider-models.md)
-- packages/app → [app/composer](modules/app/composer.md)、[app/runtime](modules/app/runtime.md)、[app/session-chat](modules/app/session-chat.md)、[app/settings](modules/app/settings.md)、[app/voice](modules/app/voice.md)、[app/workspaces-servers](modules/app/workspaces-servers.md)
-- packages/cli → [cli/acp-bridge](modules/cli/acp-bridge.md)、[cli/commands](modules/cli/commands.md)、[cli/services-updater](modules/cli/services-updater.md)、[runtime/process-lifecycle](modules/runtime/process-lifecycle.md)、[tui/mini](modules/tui/mini.md)
+- packages/app → [app/composer](modules/app/composer.md)、[app/home](modules/app/home.md)、[app/providers-usage](modules/app/providers-usage.md)、[app/runtime](modules/app/runtime.md)、[app/session-chat](modules/app/session-chat.md)、[app/settings](modules/app/settings.md)、[app/shell](modules/app/shell.md)、[app/voice](modules/app/voice.md)、[app/workspaces-servers](modules/app/workspaces-servers.md)、[misc/residual-modules](modules/misc/residual-modules.md)
+- packages/cli → [cli/acp-bridge](modules/cli/acp-bridge.md)、[cli/commands](modules/cli/commands.md)、[cli/host-glue](modules/cli/host-glue.md)、[cli/services-updater](modules/cli/services-updater.md)、[runtime/process-lifecycle](modules/runtime/process-lifecycle.md)、[tui/mini](modules/tui/mini.md)
 - packages/client → [client/sdk-transports](modules/client/sdk-transports.md)、[contracts/httpapi-protocol](modules/contracts/httpapi-protocol.md)、[protocol/codegen](modules/protocol/codegen.md)
-- packages/codemode → [codemode/runtime](modules/codemode/runtime.md)
-- packages/core → [contracts/config-flag](modules/contracts/config-flag.md)、[contracts/events-db](modules/contracts/events-db.md)、[core/background-jobs](modules/core/background-jobs.md)、[core/credential-oauth](modules/core/credential-oauth.md)、[core/location-instance](modules/core/location-instance.md)、[core/mcp-integration](modules/core/mcp-integration.md)、[core/media-format](modules/core/media-format.md)、[core/permission-policy](modules/core/permission-policy.md)、[core/platform-foundations](modules/core/platform-foundations.md)、[core/plugin-system](modules/core/plugin-system.md)、[core/provider-models](modules/core/provider-models.md)、[core/pty-shell-worktree](modules/core/pty-shell-worktree.md)、[core/session-execution](modules/core/session-execution.md)、[core/skill-system](modules/core/skill-system.md)、[core/tool-registry](modules/core/tool-registry.md)、[schema/v1-compat](modules/schema/v1-compat.md)
+- packages/codemode → [codemode/runtime](modules/codemode/runtime.md)、[codemode/tool-surface](modules/codemode/tool-surface.md)
+- packages/core → [contracts/config-flag](modules/contracts/config-flag.md)、[contracts/events-db](modules/contracts/events-db.md)、[core/background-jobs](modules/core/background-jobs.md)、[core/core-facades](modules/core/core-facades.md)、[core/credential-oauth](modules/core/credential-oauth.md)、[core/location-instance](modules/core/location-instance.md)、[core/mcp-integration](modules/core/mcp-integration.md)、[core/media-format](modules/core/media-format.md)、[core/permission-policy](modules/core/permission-policy.md)、[core/platform-foundations](modules/core/platform-foundations.md)、[core/plugin-system](modules/core/plugin-system.md)、[core/provider-models](modules/core/provider-models.md)、[core/pty-shell-worktree](modules/core/pty-shell-worktree.md)、[core/session-execution](modules/core/session-execution.md)、[core/skill-system](modules/core/skill-system.md)、[core/tool-registry](modules/core/tool-registry.md)、[schema/v1-compat](modules/schema/v1-compat.md)
 - packages/desktop → [desktop/main](modules/desktop/main.md)、[desktop/renderer](modules/desktop/renderer.md)
 - packages/function → [util-runtime/misc](modules/util-runtime/misc.md)
-- packages/gui-plugins → [gui/aux-panels](modules/gui/aux-panels.md)、[gui/browser](modules/gui/browser.md)、[gui/context](modules/gui/context.md)、[gui/debug](modules/gui/debug.md)、[gui/details](modules/gui/details.md)、[gui/file](modules/gui/file.md)、[gui/microsoft-office](modules/gui/microsoft-office.md)、[gui/pairing](modules/gui/pairing.md)、[gui/review](modules/gui/review.md)、[gui/ssh](modules/gui/ssh.md)、[gui/terminal](modules/gui/terminal.md)、[gui/updater](modules/gui/updater.md)、[gui/wsl](modules/gui/wsl.md)
+- packages/gui-plugins → [gui/aux-panels](modules/gui/aux-panels.md)、[gui/browser](modules/gui/browser.md)、[gui/context](modules/gui/context.md)、[gui/debug](modules/gui/debug.md)、[gui/details](modules/gui/details.md)、[gui/file](modules/gui/file.md)、[gui/microsoft-office](modules/gui/microsoft-office.md)、[gui/pairing](modules/gui/pairing.md)、[gui/review](modules/gui/review.md)、[gui/ssh](modules/gui/ssh.md)、[gui/terminal](modules/gui/terminal.md)、[gui/updater](modules/gui/updater.md)、[gui/wsl](modules/gui/wsl.md)、[misc/residual-modules](modules/misc/residual-modules.md)
 - packages/http-recorder → [util-runtime/misc](modules/util-runtime/misc.md)
 - packages/httpapi-codegen → [contracts/httpapi-protocol](modules/contracts/httpapi-protocol.md)、[protocol/codegen](modules/protocol/codegen.md)
 - packages/identity → [util-runtime/misc](modules/util-runtime/misc.md)
@@ -108,19 +116,19 @@
 - packages/schema → [contracts/config-flag](modules/contracts/config-flag.md)、[contracts/events-db](modules/contracts/events-db.md)、[core/background-jobs](modules/core/background-jobs.md)、[core/credential-oauth](modules/core/credential-oauth.md)、[core/mcp-integration](modules/core/mcp-integration.md)、[core/skill-system](modules/core/skill-system.md)、[schema/core-model](modules/schema/core-model.md)、[schema/v1-compat](modules/schema/v1-compat.md)
 - packages/script → [infra/misc-packages](modules/infra/misc-packages.md)
 - packages/sdk → [client/sdk-transports](modules/client/sdk-transports.md)
-- packages/server → [contracts/httpapi-protocol](modules/contracts/httpapi-protocol.md)、[server/auth-pairing](modules/server/auth-pairing.md)、[server/event-feed](modules/server/event-feed.md)、[server/http-handlers](modules/server/http-handlers.md)
-- packages/session-ui → [session-ui/timeline-message](modules/session-ui/timeline-message.md)、[session-ui/tool-renderers](modules/session-ui/tool-renderers.md)
+- packages/server → [contracts/httpapi-protocol](modules/contracts/httpapi-protocol.md)、[misc/residual-modules](modules/misc/residual-modules.md)、[server/auth-pairing](modules/server/auth-pairing.md)、[server/event-feed](modules/server/event-feed.md)、[server/http-handlers](modules/server/http-handlers.md)
+- packages/session-ui → [misc/residual-modules](modules/misc/residual-modules.md)、[session-ui/timeline-message](modules/session-ui/timeline-message.md)、[session-ui/tool-renderers](modules/session-ui/tool-renderers.md)
 - packages/simulation → [util-runtime/misc](modules/util-runtime/misc.md)
 - packages/stats → [stats/usage](modules/stats/usage.md)
 - packages/stories → [ui/primitives](modules/ui/primitives.md)、[util-runtime/misc](modules/util-runtime/misc.md)
 - packages/theme → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
-- packages/tui → [tui/components](modules/tui/components.md)、[tui/feature-plugins](modules/tui/feature-plugins.md)、[tui/mini](modules/tui/mini.md)、[tui/prompt-editor](modules/tui/prompt-editor.md)、[tui/routes-shell](modules/tui/routes-shell.md)、[tui/theme-keybinds](modules/tui/theme-keybinds.md)
-- packages/ui → [ui/primitives](modules/ui/primitives.md)
+- packages/tui → [misc/residual-modules](modules/misc/residual-modules.md)、[tui/components](modules/tui/components.md)、[tui/feature-plugins](modules/tui/feature-plugins.md)、[tui/mini](modules/tui/mini.md)、[tui/prompt-editor](modules/tui/prompt-editor.md)、[tui/routes-shell](modules/tui/routes-shell.md)、[tui/theme-keybinds](modules/tui/theme-keybinds.md)、[tui/util-runtime](modules/tui/util-runtime.md)
+- packages/ui → [misc/residual-modules](modules/misc/residual-modules.md)、[ui/primitives](modules/ui/primitives.md)
 - packages/util → [util-runtime/misc](modules/util-runtime/misc.md)
 - packages/web → [util-runtime/misc](modules/util-runtime/misc.md)
 - sdks/vscode → [util-runtime/misc](modules/util-runtime/misc.md)
 - services/files → [services/host](modules/services/host.md)
-- services/site → [services/docs-site](modules/services/docs-site.md)
+- services/site → [misc/residual-modules](modules/misc/residual-modules.md)、[services/docs-site](modules/services/docs-site.md)
 - services/update → [infra/misc-packages](modules/infra/misc-packages.md)、[services/host](modules/services/host.md)
 - sst.config.ts → [services/host](modules/services/host.md)
 
@@ -136,6 +144,7 @@
 - `integration.updated` → [core/credential-oauth](modules/core/credential-oauth.md)
 - `MenuCommandTriggered` → [desktop/main](modules/desktop/main.md)
 - `MenuCommandTriggered` → [desktop/renderer](modules/desktop/renderer.md)
+- `opencode:session-tabs-removed` → [app/shell](modules/app/shell.md)
 - `permission.asked` → [core/permission-policy](modules/core/permission-policy.md)
 - `PluginsChanged` → [desktop/main](modules/desktop/main.md)
 - `PluginsChanged` → [desktop/renderer](modules/desktop/renderer.md)
@@ -160,10 +169,15 @@
 
 - `animations` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
 - `attention.notifications` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
+- `attention.notifications` → [tui/util-runtime](modules/tui/util-runtime.md)
 - `attention.sound` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
+- `attention.sound` → [tui/util-runtime](modules/tui/util-runtime.md)
 - `attention.sound_pack` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
+- `attention.sound_pack` → [tui/util-runtime](modules/tui/util-runtime.md)
 - `attention.sounds` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
+- `attention.sounds` → [tui/util-runtime](modules/tui/util-runtime.md)
 - `attention.volume` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
+- `attention.volume` → [tui/util-runtime](modules/tui/util-runtime.md)
 - `autoupdate` → [cli/services-updater](modules/cli/services-updater.md)
 - `backgroundColor` → [desktop/main](modules/desktop/main.md)
 - `bundledCliVersion` → [desktop/main](modules/desktop/main.md)
@@ -172,6 +186,7 @@
 - `cursor.style` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
 - `DATABASE_URL` → [stats/usage](modules/stats/usage.md)
 - `default.dat` → [desktop/renderer](modules/desktop/renderer.md)
+- `devtools` → [tui/util-runtime](modules/tui/util-runtime.md)
 - `diffs.source` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
 - `diffs.wrap` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
 - `events.persist` → [server/event-feed](modules/server/event-feed.md)
@@ -216,8 +231,10 @@
 - `StatsSyncConfig.dataset` → [stats/usage](modules/stats/usage.md)
 - `tabs.indicators` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
 - `tabs.layout` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
+- `tabs.mode` → [cli/host-glue](modules/cli/host-glue.md)
 - `tabs.mode` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
 - `tabs.scope` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
+- `terminal.copy` → [cli/host-glue](modules/cli/host-glue.md)
 - `theme.mode` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
 - `theme.name` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
 - `update` → [cli/services-updater](modules/cli/services-updater.md)
@@ -262,20 +279,26 @@
 - `ProviderPackage`、`LanguageModel`、`LanguageModelCompatibility`、`Capabilities`、`ProviderOptions`、`mergeProviderOptions`、`bearerRouteDefaults`、`toConfig`、`OpenAIOptionsInput`、`ProviderID`、`DeepSeek`、`Anthropic` → [ai/providers](modules/ai/providers.md)
 - `Route`、`LLMClient`、`RequestExecutor`、`Auth`、`Endpoint`、`Framing`、`HttpTransport`、`Protocol`、`StreamOptions`、`CompactionOperations`、`canCompact`、`compileRequest` → [ai/routing](modules/ai/routing.md)
 - `Composer`、`ComposerEditor`、`createComposerModel`、`createComposerAttachments`、`buildPromptRequest`、`serializePrompt`、`promptLength`、`appendPrompt`、`parseSlashCommand`、`DEFAULT_PROMPT`、`isCommentItem`、`createComposerSubmitState`、`transitionComposerSubmit`、`transitionModelChip`、`ComposerStateTarget`、`createNewSessionStartStore`、`createNewSessionWorkspaceController`、`NEW_SESSION_WORKTREE_TIMEOUT_MS` → [app/composer](modules/app/composer.md)
+- `Home`、`createHomeController`、`HomeController`、`transitionHomeSelection`、`selectHomeSelection`、`sameHomeSelection`、`createHomeProjectsController`、`createProjectActions`、`addProjects`、`transitionProjectImport`、`useRevealProject`、`createHomeSessionsController`、`createHomeSessionSearchController`、`transitionHomeSessionsLoad`、`selectHomeSessionsListView`、`homeSessionsQuery`、`loadHomeSessionIndex`、`parseHomeSessionIndex`、`mergeHomeSessionIndex`、`retainHomeSessions`、`buildHomeSessionRecords`、`homeProjectForSession`、`homeSessionLocation`、`HOME_SESSION_LIMIT`、`HOME_SESSION_PAGE_LIMIT`、`HOME_SESSION_INDEX_LIMIT`、`transitionHomeSessionRow`、`transitionHomeSessionSearch`、`createAltHold`、`archiveHomeSession`、`shouldOpenSessionInBackground`、`createHomeScrollController`、`HomeCommandPalette`、`HomeProjectsView`、`HomeSessionsView`、`HomeSessionRecord`、`fileManagerApp` → [app/home](modules/app/home.md)
+- `useProviders`、`syncWhileBooting`、`popularProviders`、`useIntegrations`、`consoleProviderGroup`、`consoleCatalogLoaded`、`consoleProviderName`、`createConsoleCatalogSettler`、`transitionConsoleSettle`、`useMcpController`、`createProviderDialogController`、`transitionProviderConnect`、`transitionProviderDialog`、`transitionProviderForm`、`transitionMcp`、`DialogConnectProvider`、`DialogSelectMcp`、`DialogUsageExceeded`、`DialogSelectModel`、`ModelSelectorDrawer`、`transitionModelSelection`、`resolveModelVariant`、`cycleModelVariant`、`DialogUsage`、`UsageDialogContent`、`startUsageDialog`、`transitionUsageDialog`、`usageView`、`modelUsage`、`useUsageFormat`、`createModelUsage`、`DialogStoryRuntime`、`labEntry`、`storyMotion`、`applyMotionPatch`、`transitionLabStage`、`transitionLabBrowse`、`transitionDialogFlyout` → [app/providers-usage](modules/app/providers-usage.md)
 - `createOpenCodeEventSource`、`createApiForServer`、`fileStreamUrl`、`createServerTransport`、`createServerSdkContext`、`createServerControllersState`、`transitionServerControllers`、`createServerHealthState`、`transitionServerHealth`、`transitionConnectionSync`、`createMediaCache`、`createRequestQueue`、`normalizeServerUrl`、`ServerScope`、`persisted`、`Persistence`、`flushPersisted` → [app/runtime](modules/app/runtime.md)
 - `useSessionModel`、`selectSessionUserMessages`、`selectVisibleSessionUserMessages`、`MessageTimeline`、`createTimelineModel`、`createTimelineController`、`createTimelineCache`、`createTimelineVirtualizer`、`createSessionScreenLayout`、`createSessionResolution`、`sessionRouteView`、`viewedSessionID`、`createSessionQueue`、`createFollowState`、`transitionFollow`、`END_EPSILON` → [app/session-chat](modules/app/session-chat.md)
 - `Settings`、`projectSettingsKey`、`monoDefault`、`sansDefault`、`terminalDefault`、`pageIcons`、`pageLabels`、`settingsViewRedirect`、`serverPagesConnection`、`canIndexServerSettings`、`canHoldProjectRoute`、`resolveServerAvailability`、`SERVER_RETRY_TIMEOUT_MS`、`createServerRetryState`、`createSettingsProvidersState`、`transitionSettingsProviders`、`createModelsRevealState`、`MODELS_REVEAL_TIMEOUT_MS`、`providerAccounts`、`activeProviderAccount` → [app/settings](modules/app/settings.md)
+- `AppBaseProviders`、`AppInterface`、`preloadRoute`、`currentRoute`、`useCurrentRoute`、`layoutSchema`、`layoutPersistence`、`initialLayout`、`tabKey`、`tabHref`、`draftHref`、`sessionHref`、`createLayoutIntentState`、`transitionLayoutIntent`、`createSidebarPeek`、`transitionSidebarPeek`、`createPanelMotion`、`panelsMoving`、`SESSION_PANES`、`placeSessionTabs`、`openSessionTab`、`closeSessionTab`、`sessionTabPane`、`notifySessionTabsRemoved`、`SESSION_TABS_REMOVED_EVENT`、`createNotificationCoordinator`、`showToast`、`ToastRegion`、`playSoundById`、`createTitlebarHistory`、`transitionRouteTab`、`createRouteTabSync`、`transitionTabsHydration`、`transitionTabPromotion`、`pushClosedTab`、`takeClosedTab`、`transitionScrollPersistence`、`createScrollPersistence`、`ensureSessionKey`、`pruneSessionKeys`、`transitionScopedSession`、`canPruneSessions`、`transitionFocusLock`、`COMMAND_SEARCH_ID`、`DEFAULT_PALETTE_KEYBIND`、`matchKeybind`、`formatKeybind`、`desktopZoomLevels`、`DESKTOP_MENU`、`transitionErrorPage`、`errorDescriptionKey`、`ErrorPage`、`getRelativeTime`、`compareSessionTime`、`createTabMemory` → [app/shell](modules/app/shell.md)
 - `VoiceTransport`、`VoiceFailure`、`decodeEvent`、`decodeArguments`、`liveInstructions`、`delegatorInstructions`、`version`、`formatHandoff`、`headerLapse`、`VoiceTools`、`VoiceComposer`、`createVoiceCall`、`voiceCallView`、`createVoiceTransportState`、`transitionVoiceTransport`、`createVoiceCallState`、`transitionVoiceCall` → [app/voice](modules/app/voice.md)
 - `LOCATION_SYNC_RETRIES`、`LOCATION_SYNC_RETRY_DELAY`、`LOCATION_SYNC_TIMEOUT`、`createLocationSyncState`、`transitionLocationSync`、`workspaceDirectories`、`workspaceSelectionDirectories`、`managedWorkspaceDirectories`、`workspaceInventory`、`sessionsForWorkspace`、`createWorktreeInventory`、`withWorktreeInventory`、`worktreeInventoryKey`、`worktreeInventoryViewKey`、`sortServerConnections`、`useServerActionsController`、`replaceServerConnection`、`SERVER_CONNECT_TIMEOUT_MS`、`startServerConnect`、`transitionServerConnect`、`directoryPickerKind` → [app/workspaces-servers](modules/app/workspaces-servers.md)
 - `ACP`、`ACPService`、`ACPConnection`、`ACPSessions`、`ACPTurn`、`ACPPermission`、`ACPElicitation`、`ACPReplay`、`ACPCapabilities`、`ACPCatalog`、`ACPClient`、`ACPError`、`ACPChild`、`ACPTranslate`、`ACPDirectories`、`ACPPrompt`、`Standalone` → [cli/acp-bridge](modules/cli/acp-bridge.md)
 - `Commands`、`PrintLogs`、`Standalone`、`Server`、`Spec`、`Runtime`、`CliFlag`、`resolveOperation`、`remoteConsent`、`remoteWarning`、`createClient`、`inspect` → [cli/commands](modules/cli/commands.md)
+- `Env`、`password`、`OPENCODE_VERSION`、`OPENCODE_CHANNEL`、`OPENCODE_ARTIFACT`、`OPENCODE_HIGHLIGHTS`、`OPENCODE_LOCAL`、`databasePath`、`Heap`、`CpuProfile`、`AppArchive`、`AssetMap`、`BrotliMap`、`MiniCommandInput`、`runMini`、`createMiniConnection`、`resolveMiniTarget`、`validateMiniTerminal`、`InteractiveStdin`、`INTERACTIVE_INPUT_ERROR`、`createMiniHost`、`resolveInteractiveStdin`、`usingInteractiveStdin`、`SessionTarget`、`SessionTargetMutationError`、`SessionTargetPreparation`、`resolveSessionTarget`、`createWorktreeLocation`、`findSession`、`parseSessionTargetModel`、`RunCommandInput`、`runNonInteractive`、`mergeInput`、`parseRunModel`、`reportRunError`、`runNonInteractivePrompt`、`Style`、`UI`、`println`、`TimelineHost`、`createTimelineHost`、`IntegrationChoice`、`selectIntegration`、`handlePromptErrors`、`openUrl`、`requireInteractive`、`errorMessage`、`readStdin`、`readStdinIfReady`、`selfCommand`、`NodeTarget`、`nodeTarget`、`nodeExecArgv`、`photonWasmAsset`、`attentionSoundAssets`、`Config`、`ConfigMigration`、`migrateV1`、`Info`、`SchemaURL`、`normalizeLegacyTabs`、`ShutdownDeadline`、`DEADLINE`、`askpass` → [cli/host-glue](modules/cli/host-glue.md)
 - `Updater`、`Service`、`UpgradeError`、`RunResult`、`action`、`parseReleaseVersion`、`decodePolicy`、`methods`、`UpdatePreflight`、`Handle`、`RetainedImage`、`retain`、`relocate`、`installed`、`Standalone`、`start`、`WebUi`、`handler`、`PortOwner`、`describe`、`RemoteTunnel`、`ensure`、`hostname`、`ServiceRegistration`、`register`、`ServerConnection`、`resolve`、`Resolved`、`Args` → [cli/services-updater](modules/cli/services-updater.md)
 - `OpenCode`、`make`、`Service`、`discover`、`incumbent`、`ensure`、`stop`、`Info`、`SharedEvents`、`createData`、`Data`、`createClientConnection`、`defaultIdleTimeout`、`createPersistentPtyClient`、`decodePersistentPtyMessage`、`createSessionRetention`、`lastAssistantWithUsage`、`EmbeddedHost`、`SdkInstances`、`WorkerdProfile`、`PromiseSdk`、`Interface`、`layer`、`create` → [client/sdk-transports](modules/client/sdk-transports.md)
 - `VmEngine`、`Vm`、`Interpreter`、`startProgram`、`resumeProgram`、`finishExecution`、`Running`、`toBytes`、`fromBytes`、`SnapshotError`、`fromJson`、`MAX_PENDING_PROMISES`、`MAX_VALUE_DEPTH`、`globalNames`、`extensionGlobals` → [codemode/runtime](modules/codemode/runtime.md)
+- `CodeMode`、`Extension`、`Namespace`、`OpenAPI`、`Tool`、`ToolError`、`toolError`、`SuspendError`、`SnapshotError`、`toBytes`、`fromBytes`、`searchSignature`、`toolExpression`、`Services`、`isAsync`、`make`、`isTool`、`isNamespace`、`JsonSchema`、`SchemaType`、`Tools`、`toTypeScript`、`jsonSchemaToTypeScript`、`inputProperties`、`inputTypeScript`、`outputTypeScript`、`isEmptyInput`、`decodeInput`、`decodeOutput`、`identifierSegment`、`scanTools`、`fromSpec`、`invoke`、`operationPath`、`operationInput`、`operationOutput`、`specServerUrl`、`validateBaseUrl`、`securitySchemes`、`securityRequirements`、`componentDefinitions`、`hasDirectionalSchemas`、`methods`、`Plan`、`Skipped`、`Credential`、`SecurityScheme`、`AuthResolver`、`arrayGlobal`、`callbackMethods`、`stringGlobal`、`mapGlobal`、`setGlobal`、`weakMapGlobal`、`weakSetGlobal`、`groupBy`、`iteratorGlobals`、`consoleGlobal`、`formatValue`、`dateGlobal`、`regexpGlobal`、`jsonGlobal`、`mathGlobal`、`numberGlobal`、`booleanGlobal`、`objectGlobal`、`objectAssign`、`enumerableSource`、`uint8ArrayGlobal`、`textEncoderGlobal`、`textDecoderGlobal`、`TextDecoderObj`、`headersGlobal`、`urlGlobal`、`urlSearchParamsGlobal`、`uriGlobal`、`base64Global`、`structuredCloneGlobal`、`cryptoGlobal`、`coerce`、`coercion`、`compoundOperators`、`Coercion` → [codemode/tool-surface](modules/codemode/tool-surface.md)
 - `Config`、`Flag`、`Service`、`resolve`、`latest` → [contracts/config-flag](modules/contracts/config-flag.md)
 - `Bus`、`Database`、`latestSequence`、`reserveSequence`、`Service` → [contracts/events-db](modules/contracts/events-db.md)
 - `Api`、`createRoutes`、`createEmbeddedRoutes`、`handlers` → [contracts/httpapi-protocol](modules/contracts/httpapi-protocol.md)
 - `Job`、`JobList`、`Schedule`、`ScheduleCheck`、`JobTable`、`ScheduleTable`、`RecoverySchema`、`StartInput`、`WaitInput`、`BlockInput`、`NotFoundError`、`InvalidError`、`DisabledError`、`TIMEOUT_MS`、`validate`、`describe`、`authorize`、`evaluate` → [core/background-jobs](modules/core/background-jobs.md)
+- `Agent`、`App`、`Artifact`、`Command`、`FileAccess`、`FileMutation`、`FileRetention`、`FileSystem`、`Form`、`Generate`、`InstructionDiscovery`、`KV`、`Mime`、`ModelsDev`、`Reference`、`SharedCache`、`Snapshot`、`State`、`Variant`、`Voice`、`WebSearch` → [core/core-facades](modules/core/core-facades.md)
 - `Credential`、`Integration`、`CredentialTable`、`IntegrationConnection`、`ConsoleAccess`、`OauthCallbackPage`、`CopilotModels`、`AccountTable`、`AccountStateTable`、`ControlAccountTable`、`activeCredential`、`credentialSettings`、`createOpenaiCompatible`、`defaultServer`、`bootstrap`、`key` → [core/credential-oauth](modules/core/credential-oauth.md)
 - `Location`、`LocationLifecycle`、`LocationServiceMap`、`Instance`、`Project`、`Workspace`、`Worktree` → [core/location-instance](modules/core/location-instance.md)
 - `Mcp`、`McpConnection`、`McpPool` → [core/mcp-integration](modules/core/mcp-integration.md)
@@ -304,6 +327,7 @@
 - `make`、`initUpdaterMachine`、`transitionUpdater`、`toUpdaterState`、`UpdateTarget`、`Platform`、`Dependencies`、`UpdaterMachineState`、`updaterAction`、`initWhatsNew`、`transitionWhatsNew`、`whatsNewLoading`、`WHATS_NEW_TIMEOUT_MS`、`ACTION_CHUNK_TIMEOUT_MS`、`initialWindowUpdater`、`transitionWindowUpdater`、`initialWebUpdate`、`transitionWebUpdate`、`webUpdateAction`、`webUpdatePending`、`AUTO_CHECK_SPACING_MS`、`CHECK_TIMEOUT_MS`、`startWebUpdater`、`decodeEmbeddedNotes`、`sliceBetaNotes`、`allBetaNotes`、`betaBuild`、`betaHistory`、`visualSource`、`logContext` → [gui/updater](modules/gui/updater.md)
 - `Wsl`、`WslServersState`、`WslServerItem`、`WslServerConfig`、`WslServerRuntime`、`WslDistroJob`、`WslRuntimeCheck`、`WslInstalledDistro`、`WslOnlineDistro`、`WslDistroProbe`、`WslOpencodeCheck`、`createWslRuntime`、`wslArgs`、`wslCliInstallCommand`、`shellEscape`、`summarize`、`createWslServersController`、`wslServerIdForDistro`、`createWslMachineState`、`transitionWslMachine`、`toServersState`、`addServerViewModel`、`addServerProbePlan`、`createWslDialogState`、`transitionWslDialog` → [gui/wsl](modules/gui/wsl.md)
 - `pack`、`BrowserTools`、`BrowserConnection` → [infra/misc-packages](modules/infra/misc-packages.md)
+- `SessionUserActions`、`SessionDocument`、`FilePartSource`、`PresentationFileDiff`、`ServerOptions`、`ServerFetch`、`ServerWorkerd`、`wantsMediaRefs`、`motionPresets`、`MotionPreset`、`SimulationSemantics`、`iconNamesMatch` → [misc/residual-modules](modules/misc/residual-modules.md)
 - `compile`、`emitEffect`、`emitEffectImported`、`emitEffectShape`、`emitPromise`、`write`、`generate`、`GenerationError`、`Contract`、`Output`、`Alias`、`stabilizeOpenApi` → [protocol/codegen](modules/protocol/codegen.md)
 - `ServerProcess`、`ShutdownDeadline`、`ServiceConfig`、`PortOwner`、`ServerConnection`、`RemoteTunnel`、`RetainedImage`、`WebUi`、`ServiceRegistration` → [runtime/process-lifecycle](modules/runtime/process-lifecycle.md)
 - `Identifier`、`ascending`、`descending`、`SessionID`、`ProjectID`、`WorkspaceID`、`AbsolutePath`、`RelativePath`、`optional`、`statics`、`withStatics`、`DateTimeUtcFromMillis`、`Event`、`durable`、`ephemeral`、`inventory`、`latest`、`versionedType`、`durableMap`、`Location`、`Permission`、`Tool`、`Session`、`SessionMessage`、`Prompt`、`PromptInput` → [schema/core-model](modules/schema/core-model.md)
@@ -322,6 +346,7 @@
 - `Prompt`、`PromptProps`、`PromptRef`、`Autocomplete`、`PromptMetadataRow`、`usePromptMove`、`saveDraft`、`takeDraft`、`appendToSessionPrompt`、`registerComposer`、`MAX_LOCAL_ATTACHMENT_BYTES`、`normalizePastedFilepath`、`parsePastedFilepaths`、`promptFilesForServer`、`readLocalAttachment`、`normalizePromptContent`、`expandTrackedPastedText`、`expandPastedTextPlaceholders`、`parseSlashHead`、`parseFileLineRange`、`stripFileLineRange`、`promptOffsetIndex`、`mentionTriggerIndex`、`slashTriggerIndex`、`computePromptTraits`、`projectedPromptInput`、`restoredPromptInput`、`realignPromptMentions`、`deduplicatePromptImages`、`deduplicateVisibleImages`、`preserveMentionlessPromptAttachments`、`promptAttachmentLabel`、`usePromptRestore`、`MAX_FRECENCY_ENTRIES`、`parseFrecency`、`MAX_STASH_ENTRIES`、`parsePromptStash`、`parsePromptHistory`、`parsePromptInfo`、`appendPrompt`、`emptyPrompt`、`directoryAutocompleteExactValue`、`directoryAutocompleteMatches`、`slashArgumentAutocomplete`、`useDirectoryRecents`、`createSimpleContext`、`createStorage`、`useStorage`、`useStorageOptional`、`useEvent`、`usePathFormatter`、`createPanelState`、`EditorSelection`、`EditorIntegration`、`TuiPaths`、`useTuiPaths`、`InteractivityProvider`、`resolveInteractivity`、`programStatusReports`、`createProgramStatus`、`Composer`、`useComposerTab`、`ShellTab`、`TerminalsTab`、`SubagentsTab` → [tui/prompt-editor](modules/tui/prompt-editor.md)
 - `Home`、`Session`、`useRouteData`、`Route`、`HomeRoute`、`SessionRoute`、`PluginRoute`、`Keymap`、`COMMAND_PALETTE_COMMAND`、`Slot`、`SessionFrame`、`Sidebar`、`Composer`、`SessionGroupView`、`PermissionPrompt`、`FormPrompt`、`createSessionRows`、`sessionRowID`、`createTimelineAnchors`、`rowWeight`、`rowsBefore`、`rowsAfter`、`createHistoryPrepend`、`findMessageBoundary`、`generateThinkingSyntax`、`activitySummary`、`openSessionTab`、`closeSessionTab`、`reopenSessionTab`、`adaptiveSessionTabLayout`、`SESSION_TAB_MAX_WIDTH` → [tui/routes-shell](modules/tui/routes-shell.md)
 - `ThemeDocument`、`ThemeDefinition`、`ModeDefinition`、`BaseThemeDefinition`、`ThemeTokensDefinition`、`DialogTokensDefinition`、`TextDefinition`、`BackgroundDefinition`、`SyntaxDefinition`、`MarkdownDefinition`、`MarkdownToken`、`SyntaxToken`、`HueStep`、`HueName`、`HueDefinition`、`CategoricalDefinition`、`ActionState`、`ActionVariant`、`FeedbackKind`、`FormfieldState`、`SurfaceName`、`StatefulColorDefinition`、`parseThemeDocument`、`resolveThemeDocument`、`resolveTheme`、`selectTheme`、`selectThemeMode`、`supportsThemeMode`、`themeModes`、`expandTheme`、`migrateV1`、`migrateV1NewDesigns`、`generateSyntax`、`rgbToOklch`、`themeDecodeError`、`ResolvedTheme`、`ResolvedThemeTokens`、`DEFAULT_THEMES`、`allThemes`、`hasTheme`、`isThemeSource`、`parseTheme`、`setCustomThemes`、`setSystemTheme`、`subscribeThemes`、`getOpenCodeTheme`、`getOpenCode2Theme`、`resolveThemeColors`、`generateSystem`、`terminalMode`、`ansiToRgba`、`tint`、`createComponentTheme`、`ComponentTheme`、`discoverThemes`、`ThemeError`、`ThemeSource`、`createThemeSource`、`createSyntaxStyleMemo`、`useTheme`、`useThemes`、`ThemeContextProvider`、`Config`、`Info`、`Interface`、`Cursor`、`Plugin`、`DiffSource`、`MiniWorkSpinner`、`AttentionSoundName`、`AttentionSoundPaths`、`resolve`、`useConfig`、`useCursorStyle`、`useNewDesigns`、`useClientMcpExperiment`、`TuiKeybind`、`Definitions`、`LeaderDefault`、`KeybindOverrides`、`BindingValueSchema`、`bindingDefaults`、`defaultValue`、`parse`、`toBindingConfig`、`unknownKeys`、`BindingLookupView`、`CommandMap` → [tui/theme-keybinds](modules/tui/theme-keybinds.md)
+- `stringWidth`、`collapseToolOutput`、`collapseShellOutput`、`configDirectories`、`projectConfigDirectories`、`localProjectDirectory`、`hasConnectedProvider`、`createDelayedPresence`、`splitPatchHunks`、`splitAddedPatch`、`errorDetails`、`cliErrorMessage`、`errorFormat`、`errorMessage`、`filetype`、`formRows`、`formInitialValues`、`formValidateValue`、`decide`、`claim`、`titlecase`、`truncate`、`truncateWidth`、`graphemes`、`marqueeText`、`marqueeOverflows`、`createMediaCache`、`parse`、`formatRef`、`switchLabel`、`abbreviateHome`、`formatPath`、`normalizePath`、`permissionPresentation`、`readJson`、`writeJsonAtomic`、`epilogue`、`projectName`、`isRecord`、`setTerminalTitle`、`destroyRenderer`、`getScrollAcceleration`、`CustomSpeedScroll`、`copy`、`copyOnSelectRelease`、`handleSelectionKey`、`sessionFamily`、`contextUsage`、`formatContextUsage`、`createDebouncedSignal`、`createFadeIn`、`createSingleFlight`、`describeOS`、`describeTerminal`、`parseTodos`、`todoMarker`、`sessionTodos`、`canonicalToolName`、`toolDisplayMetadata`、`toolDisplayContent`、`executeCalls`、`webSearchProviderLabel`、`servedByConsole`、`usageLevel`、`formatDollars`、`formatReset`、`goLimitName`、`limitScope`、`safeWatch`、`register`、`data`、`createTuiAttention`、`createTuiClipboard`、`createClipboardAdapter`、`openEditor`、`discoverEditorConnection`、`editorIntegration`、`resolveZedSelection`、`resolveZedDbPath`、`logo`、`go`、`modelPreferenceKey`、`recentModels`、`favoriteModels`、`cycleModelVariant`、`normalizeModelVariant`、`createModelPreferenceRepository`、`decodeModelPreference` → [tui/util-runtime](modules/tui/util-runtime.md)
 - `Button`、`ButtonProps`、`Select`、`SelectProps`、`TextInput`、`TextInputProps`、`Dialog`、`DialogBody`、`DialogFooter`、`DialogHeader`、`DialogTitle`、`DialogProvider`、`useDialog`、`useDialogLayer`、`createDialogStackState`、`transitionDialogStack`、`DialogStackState`、`DIALOG_EXIT_MS`、`selectTopDialog`、`Tabs`、`Keybind`、`TextShimmer`、`ScrollView`、`Icon`、`newIcons`、`setNewIcons`、`IconName`、`getIcon`、`iconNames`、`createListState`、`transitionList`、`listActive`、`listScrollTarget`、`groupItems`、`selectListEmptyState`、`LIST_LOAD_TIMEOUT_MS`、`useFilteredList`、`FilteredListProps`、`pinSpinPhase`、`syncSpinPhase`、`springStyle`、`slidingHighlight`、`widthMorph`、`numberTween`、`ThemeProvider`、`useTheme`、`themeToCss`、`themeV2ToCss`、`resolveThemeV2`、`resolveThemeVariant`、`resolveThemeVariantV2`、`generateV2Primitives`、`mapV2Semantics`、`mergeV2Tokens`、`V2_PRIMITIVES_DEFAULT`、`ColorValue`、`ResolvedTheme`、`ResolvedV2Theme`、`DesktopTheme`、`ThemeToken`、`ThemeVariant`、`blend`、`withAlpha`、`oklchToHex`、`rgbToOklch`、`createUiI18n`、`useI18n`、`pluralCategory`、`pluralKey`、`UiI18n`、`UiTranslate`、`localizedListSeparator`、`resolveTemplate`、`showToast`、`toaster`、`Toast`、`ToastOptions`、`transitionTextFieldCopy`、`TextFieldCopyState`、`transitionTypeahead`、`createTypeaheadState`、`transitionScrollThumb`、`scrollOffsetFromThumbPointer`、`canScrollKey`、`create`、`story`、`sourceURL`、`componentConfig` → [ui/primitives](modules/ui/primitives.md)
 - `LayerNode`、`Node`、`LayerNodePlatform`、`Global`、`Path`、`Teardown`、`Observability`、`Flock`、`SessionTurn`、`AppProcess`、`ProcessSignal`、`FSUtil`、`Glob`、`Hash`、`Npm`、`onRequest`、`collections`、`docsLocale`、`fromV1`、`ContentCode`、`Manifest`、`SimulationProtocol`、`SimulationControlServer`、`SimulationNetwork`、`SimulationRenderer`、`SimulationActions`、`SimulatedProvider`、`PluginStory`、`storyIndex`、`componentConfig`、`parseRepositoryClaim`、`HttpRecorder`、`Cassette`、`RequestMatcher`、`Redactor`、`ReplayState`、`activate`、`deactivate` → [util-runtime/misc](modules/util-runtime/misc.md)
 
@@ -329,22 +354,16 @@
 
 | 目录 | 源文件 | 未归属 |
 | --- | --- | --- |
-| `packages/app` | 685 | 174 |
-| `packages/tui` | 300 | 50 |
-| `packages/core` | 493 | 35 |
-| `packages/codemode` | 105 | 29 |
-| `packages/cli` | 115 | 26 |
-| `packages/session-ui` | 139 | 11 |
-| `packages/server` | 60 | 4 |
-| `packages/ui` | 266 | 3 |
-| `services/site` | 388 | 2 |
-| `packages/gui-plugins` | 904 | 1 |
 | `packages/web` | 20 | 0 |
 | `packages/util` | 45 | 0 |
+| `packages/ui` | 266 | 0 |
+| `packages/tui` | 300 | 0 |
 | `packages/theme` | 11 | 0 |
 | `packages/stories` | 3 | 0 |
 | `packages/stats` | 83 | 0 |
 | `packages/simulation` | 13 | 0 |
+| `packages/session-ui` | 139 | 0 |
+| `packages/server` | 60 | 0 |
 | `packages/sdk` | 15 | 0 |
 | `packages/script` | 3 | 0 |
 | `packages/schema` | 107 | 0 |
@@ -356,7 +375,13 @@
 | `packages/latex` | 8 | 0 |
 | `packages/httpapi-codegen` | 1 | 0 |
 | `packages/http-recorder` | 14 | 0 |
+| `packages/gui-plugins` | 904 | 0 |
 | `packages/function` | 3 | 0 |
 | `packages/desktop` | 148 | 0 |
+| `packages/core` | 493 | 0 |
+| `packages/codemode` | 105 | 0 |
 | `packages/client` | 28 | 0 |
+| `packages/cli` | 115 | 0 |
+| `packages/app` | 685 | 0 |
+| `packages/ai` | 247 | 0 |
 

@@ -48,7 +48,7 @@ function extract(file: string) {
           if (name && /^[A-Za-z_$][\w$]*$/.test(name)) names.push(name)
         }
       } else if (match[1]) {
-        names.push(match[1])
+        names.push(match[1].trim())
       }
       match = regex.exec(text)
     }
