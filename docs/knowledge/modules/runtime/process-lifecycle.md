@@ -20,7 +20,6 @@ symbols:
   - ServerConnection
   - RemoteTunnel
   - RetainedImage
-  - WebUi
   - ServiceRegistration
 entry_cli:
   - run
@@ -47,7 +46,7 @@ keywords:
   - service
   - 端口
   - mini
-source_hash: 2edffb14b64bcacd4745fed72d99bfd010c3262b
+source_hash: 7a374318cbf0227192ddacb80dc1ab1fa3e34fb7
 ---
 
 ## 职责

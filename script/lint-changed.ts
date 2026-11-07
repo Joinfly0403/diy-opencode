@@ -17,12 +17,7 @@ const tracked = (await $`git diff --name-only -M100% --diff-filter=ACM ${base}`.
 const untracked = (await $`git ls-files --others --exclude-standard`.text()).split("\n")
 // The packages .oxlintrc.json applies the anti-slop rules to.
 const packages = [
-  "packages/app/",
-  "packages/desktop/",
-  "packages/gui-plugins/",
   "packages/plugin/src/gui/",
-  "packages/ui/",
-  "packages/session-ui/",
 ]
 // oxlint skips declaration files and prints a non-JSON message when given only those.
 const files = [...new Set([...tracked, ...untracked])].filter(

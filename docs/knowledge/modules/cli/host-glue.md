@@ -34,9 +34,6 @@ symbols:
   - databasePath
   - Heap
   - CpuProfile
-  - AppArchive
-  - AssetMap
-  - BrotliMap
   - MiniCommandInput
   - runMini
   - createMiniConnection
@@ -130,7 +127,7 @@ keywords:
   - 资源解包
   - cpu profile
   - heap
-source_hash: 6b1b18c5cb65f20ea3a36ef9bffc1ea5f0048375
+source_hash: 12a78cf087a608b1f47fbf904a66a5b5a98d9b5b
 ---
 
 ## 职责

@@ -21,7 +21,6 @@
   },
   "scripts": {
     "build": "bun run script/build.ts",
-    "pack": "bun run script/pack.ts",
     "typecheck": "bun check --no-script",
     "typecheck:tsc": "tsc --noEmit",
     "test": "bun test && CODEMODE_ENGINE=vm bun test",

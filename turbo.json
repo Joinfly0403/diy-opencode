@@ -32,9 +32,6 @@
     "@opencode/server#typecheck:tsc": {
       "dependsOn": ["transit", "@opencode/core#typecheck:tsc"]
     },
-    "@opencode/simulation#typecheck:tsc": {
-      "dependsOn": ["transit", "@opencode/core#typecheck:tsc"]
-    },
     "@opencode/tui#typecheck:tsc": {
       "dependsOn": ["transit", "@opencode/core#typecheck:tsc"]
     },
@@ -56,10 +53,6 @@
     "test": {
       "dependsOn": ["transit"],
       "outputs": []
-    },
-    "@opencode/desktop#test": {
-      "outputs": [],
-      "cache": false
     },
     "@opencode/sdk#verify:package": {
       "outputs": []

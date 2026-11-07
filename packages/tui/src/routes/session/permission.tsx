@@ -13,7 +13,6 @@ import { useConfig, useCursorStyle } from "../../config"
 import { Keymap } from "../../context/keymap"
 import { useInteractivity } from "../../context/interactivity"
 import { usePathFormatter } from "../../context/path-format"
-import { SimulationSemantics } from "../../simulation/semantics"
 import { PatchDiff } from "../../component/patch-diff"
 import { useToast } from "../../ui/toast"
 
@@ -309,11 +308,6 @@ function RejectPrompt(props: {
   return (
     <box
       id="session.permission.reject"
-      ref={SimulationSemantics.bind(() => ({
-        instance: props.instance,
-        role: "dialog",
-        label: `Reject permission: ${props.action}`,
-      }))}
       backgroundColor={theme.background.raised.base}
       border={["left"]}
       borderColor={theme.text.feedback.error.base}
@@ -344,13 +338,6 @@ function RejectPrompt(props: {
           id="session.permission.reject.message"
           ref={(val: TextareaRenderable) => {
             input = val
-            SimulationSemantics.bind(() => ({
-              instance: props.instance,
-              role: "textbox",
-              label: "Rejection reason",
-              focused: val.focused,
-              disabled: false,
-            }))(val)
             val.traits = { status: "REJECT" }
           }}
           focused={enabled()}
@@ -361,23 +348,12 @@ function RejectPrompt(props: {
         />
         <box
           id="session.permission.reject.actions"
-          ref={SimulationSemantics.bind(() => ({
-            instance: props.instance,
-            role: "group",
-            label: "Rejection actions",
-          }))}
           flexDirection="row"
           gap={2}
           flexShrink={0}
         >
           <box
             id="session.permission.reject.confirm"
-            ref={SimulationSemantics.bind(() => ({
-              instance: props.instance,
-              role: "button",
-              label: "Confirm rejection",
-              disabled: false,
-            }))}
             onMouseUp={() => props.onConfirm(input.plainText)}
           >
             <text fg={theme.text.base}>
@@ -386,12 +362,6 @@ function RejectPrompt(props: {
           </box>
           <box
             id="session.permission.reject.cancel"
-            ref={SimulationSemantics.bind(() => ({
-              instance: props.instance,
-              role: "button",
-              label: "Cancel rejection",
-              disabled: false,
-            }))}
             onMouseUp={props.onCancel}
           >
             <text fg={theme.text.base}>
@@ -501,12 +471,6 @@ export function SessionQuestion<const T extends Record<string, string>>(props: {
   const content = () => (
     <box
       id={id()}
-      ref={SimulationSemantics.bind(() => ({
-        instance: props.instance,
-        role: "dialog",
-        label: props.semanticLabel ?? props.title,
-        expanded: store.expanded,
-      }))}
       backgroundColor={theme.background.raised.base}
       border={["left"]}
       borderColor={theme.background.action.primary.focused}
@@ -552,11 +516,6 @@ export function SessionQuestion<const T extends Record<string, string>>(props: {
       >
         <box
           id={`${id()}.actions`}
-          ref={SimulationSemantics.bind(() => ({
-            instance: props.instance,
-            role: "listbox",
-            label: props.choicesLabel ?? "Permission choices",
-          }))}
           flexDirection="row"
           gap={1}
           flexShrink={0}
@@ -565,14 +524,6 @@ export function SessionQuestion<const T extends Record<string, string>>(props: {
             {(option) => (
               <box
                 id={`${id()}.action.${String(option)}`}
-                ref={SimulationSemantics.bind(() => ({
-                  instance: props.instance,
-                  role: "option",
-                  label: props.options[option],
-                  focused: option === store.selected,
-                  selected: option === store.selected,
-                  disabled: false,
-                }))}
                 paddingLeft={1}
                 paddingRight={1}
                 backgroundColor={

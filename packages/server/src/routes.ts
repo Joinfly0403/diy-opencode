@@ -160,15 +160,7 @@ function makeRoutes<AuthError, AuthServices>(
     ]
     return AppNodeBuilder.build(applicationServices, replacements)
   }
-  const serviceLayer = options.simulation
-    ? Layer.unwrap(
-        Effect.gen(function* () {
-          const { simulationReplacements } = yield* Effect.promise(() => import("@opencode/simulation/backend"))
-          const simulation = yield* simulationReplacements({ version: App.make(options.app).version })
-          return build([...overrides, ...simulation])
-        }),
-      )
-    : build(overrides)
+  const serviceLayer = build(overrides)
   return serviceLayer.pipe(
     Layer.flatMap((context) => {
       const services = Layer.succeedContext(context)

@@ -128,7 +128,6 @@ depends_on:
   - tui/prompt-editor
   - tui/components
 related:
-  - app/providers-usage
   - tui/theme-keybinds
   - tui/mini
   - core/location-instance
@@ -153,7 +152,7 @@ keywords:
   - devtools
   - bun
   - node
-source_hash: f0563ca3f7e0e2abd860f476ca67b10fd6106c21
+source_hash: d792489b01e3407579d637c6d6acbc6eacf0147c
 ---
 
 ## 职责

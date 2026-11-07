@@ -272,10 +272,6 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
             }),
           )
         }
-        if (process.env.OPENCODE_DRIVE) {
-          const { Drive } = yield* Effect.promise(() => import("@opencode/simulation/frontend"))
-          return yield* Drive.create(options, input.app.version)
-        }
         return yield* Effect.acquireRelease(
           Effect.tryPromise({
             try: () => createCliRenderer(options),

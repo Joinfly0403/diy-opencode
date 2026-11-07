@@ -54,7 +54,7 @@ keywords:
   - ndjson
   - 会话桥
   - 权限转发
-source_hash: 8699bd3808a37ee92213b8776ae5a229c61b66b6
+source_hash: a442faa88a22a7aae107286010291c6752952b8c
 ---
 
 ## 职责

@@ -24,7 +24,6 @@ symbols:
 depends_on:
   - core/location-instance
 related:
-  - gui/terminal
   - cli/commands
 keywords:
   - pty

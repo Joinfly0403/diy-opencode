@@ -4,7 +4,6 @@ import { createRequire } from "node:module"
 import { defineConfig, type Plugin, type UserConfig } from "vite"
 import solid from "vite-plugin-solid"
 import { nodeExecArgv, nodeTarget, type NodeTarget, photonWasmAsset } from "./src/node/target"
-import { verifySimulationGraph } from "./script/verify-artifact"
 
 const dir = import.meta.dirname
 
@@ -63,8 +62,7 @@ function runtimeRequirePlugin(): Plugin {
 function simulationGraphPlugin(): Plugin {
   return {
     name: "opencode:simulation-graph",
-    generateBundle() {
-      verifySimulationGraph(this.getModuleIds())
+    generateBundle() {)
     },
   }
 }

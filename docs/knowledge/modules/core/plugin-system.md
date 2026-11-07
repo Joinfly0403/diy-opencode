@@ -22,7 +22,6 @@ depends_on:
   - core/location-instance
 related:
   - core/tool-registry
-  - session-ui/tool-renderers
 keywords:
   - 插件
   - plugin
@@ -31,7 +30,7 @@ keywords:
   - 激活
   - 热重载
   - gui 插件
-source_hash: d35229b9ccfa7fe85223fedfa57fd72e1cf69dce
+source_hash: b920636644cff6943de1321c63364fe09c963913
 ---
 
 ## 职责

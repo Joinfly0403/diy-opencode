@@ -25,12 +25,7 @@
   "overrides": [
     {
       "files": [
-        "packages/app/**",
-        "packages/desktop/**",
-        "packages/gui-plugins/**",
         "packages/plugin/src/gui/**",
-        "packages/ui/**",
-        "packages/session-ui/**"
       ],
       "rules": {
         "oxc/no-accumulating-spread": "warn",
@@ -56,11 +51,7 @@
     },
     {
       "files": [
-        "packages/app/**",
-        "packages/desktop/**",
-        "packages/gui-plugins/**",
         "packages/plugin/src/gui/**",
-        "packages/session-ui/**"
       ],
       "rules": {
         "anti-slop-effect/no-manual-effect-error-tag": "warn",

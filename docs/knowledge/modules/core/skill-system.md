@@ -57,7 +57,7 @@ tests:
   - packages/core/test/skill-discovery.test.ts
   - packages/core/test/skill/instructions.test.ts
   - packages/core/test/tool-skill.test.ts
-source_hash: f16c93485efe65c94517f41a6b5bdc6864b9a31f
+source_hash: ef492cfc3a5d9d3445bec0f7364c04064668d120
 ---
 
 ## 职责

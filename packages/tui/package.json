@@ -24,7 +24,8 @@
     "./util/form": "./src/util/form.ts",
     "./logo": "./src/logo.ts",
     "./component/spinner": "./src/component/spinner.tsx",
-    "./component/spinner-renderable": "./src/component/spinner-renderable.ts"
+    "./component/spinner-renderable": "./src/component/spinner-renderable.ts",
+    "./assets/audio/*": "./assets/audio/*"
   },
   "imports": {
     "#attention-sounds": {
@@ -55,9 +56,7 @@
     "@opencode/merman": "workspace:*",
     "@opencode/plugin": "workspace:*",
     "@opencode/schema": "workspace:*",
-    "@opencode/simulation": "workspace:*",
     "@opencode/theme": "workspace:*",
-    "@opencode/ui": "workspace:*",
     "@opencode/util": "workspace:*",
     "@opentui/core": "catalog:",
     "@opentui/keymap": "catalog:",
