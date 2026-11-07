@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "bun run --cwd packages/cli src/index.ts",
     "dev:live": "sh -c 'OPENCODE_TUI_CHANNEL=dev OPENCODE_PASSWORD=\"$(opencode service get password)\" exec bun run dev \"$@\" --server \"$(opencode service status)\"' --",
-    "lint": "oxlint && bun script/sdk-docs.ts",
+    "lint": "oxlint",
     "lint:changed": "bun script/lint-changed.ts",
     "lint:effect-patterns": "ast-grep scan -c script/ast-grep/sgconfig.yml packages/util/src packages/core/src packages/server/src packages/protocol/src packages/cli/src",
     "lint:effect-simplifications": "ast-grep scan -c script/ast-grep/effect-simplifications/sgconfig.yml --off=unused-suppression packages",
@@ -122,7 +122,6 @@
   },
   "dependencies": {
     "@opencode/plugin": "workspace:*",
-    "@opencode/script": "workspace:*",
     "typescript": "catalog:"
   },
   "repository": {

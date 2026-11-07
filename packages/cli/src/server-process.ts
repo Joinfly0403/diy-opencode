@@ -155,6 +155,7 @@ const processEffect = Effect.fnUntraced(function* (options: Options) {
                   })
                 }),
             },
+        undefined,
         () => remote.urls,
       )
       const server = yield* launch.pipe(
