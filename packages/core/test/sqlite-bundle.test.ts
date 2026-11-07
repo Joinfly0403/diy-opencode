@@ -8,6 +8,7 @@ import { join } from "path"
 // at module load. Bare imports are externalized so only core-relative modules —
 // including the #sqlite resolution under test — end up in the bundle, and the
 // client package each runtime picked stays visible as an import specifier.
+// workerd conditions were removed with the Cloudflare runtime; only bun/node remain.
 const externalizeBare: BunPlugin = {
   name: "externalize-bare",
   setup(build) {
@@ -35,15 +36,6 @@ const bundle = async (conditions: Array<string>) => {
 // file). The assertions pin platform-independent package.json condition
 // resolution, so Linux coverage loses nothing.
 describe.skipIf(process.platform === "win32")("sqlite bundle conditions", () => {
-  test("workerd conditions select the Durable Object driver and never bun:sqlite", async () => {
-    const output = await bundle(["workerd"])
-    expect(output).not.toContain("bun:sqlite")
-    expect(output).not.toContain("node:sqlite")
-    expect(output).not.toContain("@effect/sql-sqlite-bun")
-    expect(output).not.toContain("@effect/sql-sqlite-node")
-    expect(output).toContain("SqliteWorkerd")
-  })
-
   test.each([[["node"]], [[]]])("%p conditions select the Node client, not bun:sqlite", async (conditions) => {
     const output = await bundle(conditions)
     expect(output).not.toContain("bun:sqlite")
