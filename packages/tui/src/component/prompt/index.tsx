@@ -9,6 +9,7 @@ import {
   stripAnsiSequences,
   type KeyEvent,
 } from "@opentui/core"
+import { t } from "../../i18n.js"
 import { createEffect, createMemo, onMount, createSignal, onCleanup, on, Show, Switch, Match, For } from "solid-js"
 import path from "path"
 import { useLocal } from "../../context/local"
@@ -268,7 +269,7 @@ export function Prompt(props: PromptProps) {
     commands: [
       {
         id: "session.cd",
-        title: "Change working directory",
+        title: t("Change working directory"),
         slash: { name: "cd", arguments: true },
         run: async (input) => {
           if (!input?.trim()) {

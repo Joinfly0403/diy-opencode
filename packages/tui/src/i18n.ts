@@ -64,7 +64,12 @@ const zh: Record<string, string> = {
   "Always allow": "始终允许",
   "Reject": "拒绝",
   "Getting started": "开始使用",
-  "Could not open the browser. Copy the URL and continue manually.": "无法打开浏览器，请复制链接手动继续。"
+  "Could not open the browser. Copy the URL and continue manually.": "无法打开浏览器，请复制链接手动继续。",
+  "One-shot answer from the session's context without adding to the conversation": "不打断会话的临时问答，不写入对话历史",
+  "Change working directory": "切换工作目录",
+  "Compact session": "压缩会话",
+  "Copy last assistant message": "复制上一条回答",
+  "Open diff viewer": "打开差异视图"
   }
 
 export function t(text: string): string {

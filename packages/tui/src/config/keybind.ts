@@ -1,4 +1,5 @@
 export * as TuiKeybind from "./keybind"
+import { t } from "../i18n.js"
 
 import type { KeyEvent, Renderable } from "@opentui/core"
 import type { Binding } from "@opentui/keymap"
@@ -61,7 +62,7 @@ export const Definitions = {
   "server.pair": keybind("none", "Pair device"),
   "service.restart": keybind("none", "Restart service"),
   "location.reload": keybind("none", "Reload configuration"),
-  "diff.open": keybind("none", "Open diff viewer"),
+  "diff.open": keybind("none", t("Open diff viewer")),
   "diff.close": keybind("escape,q", "Close diff viewer"),
   "diff.down": keybind("j,down", "Move diff viewer down"),
   "diff.up": keybind("k,up", "Move diff viewer up"),
@@ -129,7 +130,7 @@ export const Definitions = {
   "session.background": keybind("ctrl+b", "Background blocking session tools"),
   "session.compact": keybind("<leader>c", "Compact the session"),
   "session.aside": keybind("none", "Ask a side question"),
-  "session.cd": keybind("none", "Change working directory"),
+  "session.cd": keybind("none", t("Change working directory")),
   "session.queued_prompts": keybind("<leader>q", "Manage queued prompts"),
   "queued_prompt.undo": keybind("ctrl+u", "Undo queued prompt"),
   "queued_prompt.delete": keybind("ctrl+d", "Delete queued prompt"),

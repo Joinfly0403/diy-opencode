@@ -1,5 +1,6 @@
 /** @jsxImportSource @opentui/solid */
 import { TextAttributes, type InputRenderable, type KeyEvent } from "@opentui/core"
+import { t } from "../i18n.js"
 import { useKeyboard, useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import fuzzysort from "fuzzysort"
 import { createEffect, createMemo, createSignal, type Accessor } from "solid-js"
@@ -447,7 +448,7 @@ export function RunCommandMenuBody(props: {
         action: "slash",
         category: "Session",
         name: "compact",
-        display: "Compact session",
+        display: t("Compact session"),
         footer: "/compact",
         keywords: "compact session context",
       },

@@ -12,6 +12,7 @@ import {
   Switch,
   type Accessor,
 } from "solid-js"
+import { t } from "../../i18n.js"
 import path from "node:path"
 import { EOL } from "node:os"
 import { mkdir, writeFile } from "node:fs/promises"
@@ -1094,7 +1095,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Compact session",
+      title: t("Compact session"),
       id: "session.compact",
       group: "Session",
       slash: {
@@ -1271,7 +1272,7 @@ export function Session(props: {
       run: () => scrollToMessage("prev", dialog, true),
     },
     {
-      title: "Copy last assistant message",
+      title: t("Copy last assistant message"),
       id: "messages.copy",
       group: "Session",
       slash: {

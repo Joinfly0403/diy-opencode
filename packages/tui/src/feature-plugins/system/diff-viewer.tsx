@@ -1,5 +1,6 @@
 /** @jsxImportSource @opentui/solid */
 import type { FileDiffInfo, LocationRef } from "@opencode/client"
+import { t } from "../../i18n.js"
 import type { Vcs } from "@opencode/schema/vcs"
 import { Plugin } from "@opencode/plugin/tui"
 import type { KeymapCommand, PanelInput, Route } from "@opencode/plugin/tui/context"
@@ -1315,7 +1316,7 @@ function Commands(props: { context: Plugin.Context }) {
     commands: [
       {
         id: "diff.open",
-        title: "Open diff viewer",
+        title: t("Open diff viewer"),
         slash: { name: "diff" },
         group: "VCS",
         palette: true,

@@ -1,4 +1,5 @@
 export * as TuiKeybind from "./keybind"
+import { t } from "../../i18n.js"
 
 import type { KeyEvent, Renderable } from "@opentui/core"
 import type { Binding } from "@opentui/keymap"
@@ -56,7 +57,7 @@ export const Definitions = {
   command_list: keybind("ctrl+p", "List available commands"),
   help_show: keybind("none", "Open help dialog"),
   docs_open: keybind("none", "Open documentation"),
-  diff_open: keybind("none", "Open diff viewer"),
+  diff_open: keybind("none", t("Open diff viewer")),
   diff_close: keybind("escape,q", "Close diff viewer"),
   diff_toggle: keybind("enter,space", "Toggle diff viewer item"),
   diff_expand: keybind("right", "Expand diff viewer item"),

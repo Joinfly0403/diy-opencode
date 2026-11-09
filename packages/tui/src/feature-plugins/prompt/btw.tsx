@@ -1,4 +1,5 @@
 import { Plugin } from "@opencode/plugin/tui"
+import { t } from "../../i18n.js"
 import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
 import { useKeyboard, useTerminalDimensions } from "@opentui/solid"
 import { createMemo, createSignal, Show } from "solid-js"
@@ -51,7 +52,7 @@ export default Plugin.define({
             {
               id: "session.aside",
               title: "Ask a side question",
-              description: "One-shot answer from the session's context without adding to the conversation",
+              description: t("One-shot answer from the session's context without adding to the conversation"),
               group: "Session",
               palette: true,
               slash: { name: "btw", arguments: true },
