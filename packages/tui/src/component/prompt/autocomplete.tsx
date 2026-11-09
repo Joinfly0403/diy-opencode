@@ -5,6 +5,7 @@ import {
   type TextareaRenderable,
   type ScrollBoxRenderable,
 } from "@opentui/core"
+import { t } from "../../i18n.js"
 import { pathToFileURL } from "node:url"
 import fuzzysort from "fuzzysort"
 import path from "path"
@@ -494,7 +495,7 @@ export function Autocomplete(props: {
       if (!slash) return []
       return [slash.name, ...(slash.aliases ?? [])].map((name) => ({
         display: `/${name}`,
-        description: command.description ?? command.title,
+        description: t(command.description ?? command.title),
         onSelect: slash.arguments ? () => insertSlash(name) : command.run,
       }))
     })
@@ -504,7 +505,7 @@ export function Autocomplete(props: {
       commandNames.add(serverCommand.name)
       results.push({
         display: "/" + serverCommand.name,
-        description: serverCommand.description,
+        description: t(serverCommand.description),
         queueable: true,
         onSelect: () => insertSlash(serverCommand.name),
       })
