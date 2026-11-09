@@ -1,6 +1,9 @@
 #!/usr/bin/env bun
 
 import { ensurePluginRuntime } from "@opencode/plugin/runtime"
+import { EnvBootstrap } from "./env-bootstrap.js"
+
+EnvBootstrap.mirror()
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { Cause, Effect } from "effect"
 import { defaultTeardown, getErrorReported } from "effect/Runtime"

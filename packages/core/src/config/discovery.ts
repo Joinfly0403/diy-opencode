@@ -9,7 +9,8 @@ import { Location } from "../location.js"
 import { AbsolutePath } from "../schema.js"
 import type { Options } from "../config.js"
 
-export const names = ["opencode.json", "opencode.jsonc"]
+// cogagent 名称优先；opencode 旧名保留读取，兼容已有仓库里的配置文件。
+export const names = ["cogagent.json", "cogagent.jsonc", "opencode.json", "opencode.jsonc"]
 
 /** Eligible sources in priority order, including paths that may appear later. */
 export interface Sources {

@@ -1,7 +1,10 @@
 export * as ServerProcess from "./server-process"
 
+EnvBootstrap.mirror()
+
 import { NodeServices } from "@effect/platform-node"
 import { read as readBrandEnv } from "@opencode/util/env"
+import { EnvBootstrap } from "./env-bootstrap.js"
 import { Service } from "@opencode/client/effect/service"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Global } from "@opencode/util/global"
