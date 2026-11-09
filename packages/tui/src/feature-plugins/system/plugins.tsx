@@ -1,4 +1,5 @@
 import type { PluginInfo } from "@opencode/client"
+import { t } from "../../i18n.js"
 import { Plugin } from "@opencode/plugin/tui"
 import path from "path"
 import { createEffect, createMemo, createResource, createSignal, onCleanup, onMount, Show } from "solid-js"
@@ -192,7 +193,7 @@ export function PluginsDialog(props: { context: Plugin.Context; plugins: ReturnT
             bindings={[
               {
                 bind: "ctrl+a",
-                title: "Toggle internal plugins",
+                title: t("Toggle internal plugins"),
                 group: "Plugins",
                 run: () => {
                   setShowInternal((value) => !value)
@@ -201,7 +202,7 @@ export function PluginsDialog(props: { context: Plugin.Context; plugins: ReturnT
             ]}
             footerHints={[
               ...(pluginError(focusedEntry()) && !focusedTui()
-                ? [{ title: "view error", label: "enter", group: "primary" as const }]
+                ? [{ title: t("view error"), label: "enter", group: "primary" as const }]
                 : []),
               { title: `${showInternal() ? "hide" : "show"} internal`, label: "ctrl+a" },
             ]}
@@ -228,7 +229,7 @@ export function PluginsDialog(props: { context: Plugin.Context; plugins: ReturnT
                 onTrigger: check,
               },
               {
-                title: "view error",
+                title: t("view error"),
                 command: "dialog.plugins.error",
                 hidden: !pluginError(focusedTui()),
                 onTrigger: (option) => {
@@ -244,7 +245,7 @@ export function PluginsDialog(props: { context: Plugin.Context; plugins: ReturnT
                 onTrigger: (option) => toggle(entries().find((entry) => entry.key === option.value)),
               },
               {
-                title: "update",
+                title: t("update"),
                 command: "dialog.plugins.update",
                 side: "right",
                 hidden: !updatable(focusedEntry()),
@@ -335,7 +336,7 @@ function Commands(props: { context: Plugin.Context }) {
     commands: [
       {
         id: "plugins.list",
-        title: "Plugins",
+        title: t("Plugins"),
         group: "System",
         slash: { name: "plugins" },
         palette: true,

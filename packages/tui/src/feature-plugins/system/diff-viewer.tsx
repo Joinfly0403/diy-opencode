@@ -79,10 +79,10 @@ function storedView(value: unknown): DiffView | undefined {
 }
 
 const DIFF_SOURCES = {
-  branch: { label: "All", description: "Branch + local changes" },
-  committed: { label: "Committed", description: "Branch commits only" },
-  working: { label: "Uncommitted", description: "Local changes only" },
-  turn: { label: "Last turn", description: "Latest session turn" },
+  branch: { label: t("All"), description: t("Branch + local changes") },
+  committed: { label: t("Committed"), description: t("Branch commits only") },
+  working: { label: t("Uncommitted"), description: t("Local changes only") },
+  turn: { label: t("Last turn"), description: t("Latest session turn") },
 } satisfies Record<DiffMode, { label: string; description: string }>
 
 const VCS_SOURCES = ["branch", "committed", "working"] as const
@@ -589,13 +589,13 @@ export function DiffViewerContent(props: {
   const commands: KeymapCommand[] = [
     {
       id: "diff.close",
-      title: "Close diff viewer",
+      title: t("Close diff viewer"),
       group: "VCS",
       run: close,
     },
     {
       id: "diff.down",
-      title: "Move diff viewer down",
+      title: t("Move diff viewer down"),
       group: "VCS",
       run() {
         clearPatchSelection()
@@ -604,7 +604,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.up",
-      title: "Move diff viewer up",
+      title: t("Move diff viewer up"),
       group: "VCS",
       run() {
         clearPatchSelection()
@@ -613,31 +613,31 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.page.down",
-      title: "Page diff viewer down",
+      title: t("Page diff viewer down"),
       group: "VCS",
       run: () => scrollPage(1, 1),
     },
     {
       id: "diff.page.up",
-      title: "Page diff viewer up",
+      title: t("Page diff viewer up"),
       group: "VCS",
       run: () => scrollPage(-1, 1),
     },
     {
       id: "diff.half_page.down",
-      title: "Scroll down half a page",
+      title: t("Scroll down half a page"),
       group: "VCS",
       run: () => scrollPage(1, 2),
     },
     {
       id: "diff.half_page.up",
-      title: "Scroll up half a page",
+      title: t("Scroll up half a page"),
       group: "VCS",
       run: () => scrollPage(-1, 2),
     },
     {
       id: "diff.first",
-      title: "Go to the start of the diff",
+      title: t("Go to the start of the diff"),
       group: "VCS",
       run() {
         clearPatchSelection()
@@ -646,7 +646,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.last",
-      title: "Go to the end of the diff",
+      title: t("Go to the end of the diff"),
       group: "VCS",
       run() {
         clearPatchSelection()
@@ -655,7 +655,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.next_hunk",
-      title: "Jump to next diff hunk",
+      title: t("Jump to next diff hunk"),
       group: "VCS",
       run() {
         jumpRelativeHunk(1)
@@ -663,7 +663,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.previous_hunk",
-      title: "Jump to previous diff hunk",
+      title: t("Jump to previous diff hunk"),
       group: "VCS",
       run() {
         jumpRelativeHunk(-1)
@@ -671,7 +671,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.next_file",
-      title: "Jump to next diff file",
+      title: t("Jump to next diff file"),
       group: "VCS",
       run() {
         jumpRelativePatchFile(1)
@@ -679,7 +679,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.previous_file",
-      title: "Jump to previous diff file",
+      title: t("Jump to previous diff file"),
       group: "VCS",
       run() {
         jumpRelativePatchFile(-1)
@@ -687,7 +687,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.mark_reviewed",
-      title: "Toggle selected diff file reviewed",
+      title: t("Toggle selected diff file reviewed"),
       group: "VCS",
       run() {
         const fileIndex = selectedFileIndex() ?? currentPatchFileIndex()
@@ -697,7 +697,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.toggle_file_tree",
-      title: "Toggle diff viewer file tree",
+      title: t("Toggle diff viewer file tree"),
       group: "VCS",
       enabled: () => !compact(),
       run() {
@@ -709,7 +709,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.single_patch",
-      title: "Toggle single patch view",
+      title: t("Toggle single patch view"),
       group: "VCS",
       run() {
         setSelectedHunk(undefined)
@@ -731,7 +731,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.switch_source",
-      title: "Switch diff viewer source",
+      title: t("Switch diff viewer source"),
       group: "VCS",
       run() {
         openSwitchDiffDialog()
@@ -739,7 +739,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.toggle_view",
-      title: "Toggle diff viewer split or unified view",
+      title: t("Toggle diff viewer split or unified view"),
       group: "VCS",
       run() {
         if (!splitAvailable()) return
@@ -751,7 +751,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.toggle_fullscreen",
-      title: "Toggle diff viewer full screen",
+      title: t("Toggle diff viewer full screen"),
       group: "VCS",
       enabled: () => props.panel !== undefined,
       run: () => {
@@ -766,7 +766,7 @@ export function DiffViewerContent(props: {
     },
     {
       id: "diff.help",
-      title: "Show more diff viewer shortcuts",
+      title: t("Show more diff viewer shortcuts"),
       group: "VCS",
       run() {
         openHelpDialog()
@@ -775,7 +775,7 @@ export function DiffViewerContent(props: {
     // Specific diff bindings take precedence over app.exit's Ctrl+D binding.
     {
       id: "app.exit",
-      title: "Close diff viewer",
+      title: t("Close diff viewer"),
       group: "VCS",
       run: close,
     },
@@ -802,7 +802,7 @@ export function DiffViewerContent(props: {
           ...(props.onChooseBase
             ? [
                 {
-                  title: "Base",
+                  title: t("Base"),
                   titleView: "Base".padEnd(11),
                   value: "base" as const,
                   description: props.sourceBase?.name ?? "Choose…",
@@ -1226,7 +1226,7 @@ function DiffViewerHelpDialog(props: { context: Plugin.Context; single: boolean;
         .join(" / ")
   const groups = [
     {
-      title: "Review",
+      title: t("Review"),
       rows: [
         { shortcut: () => props.context.keymap.shortcuts("diff.next_file").join(" / "), label: "Next file" },
         { shortcut: () => props.context.keymap.shortcuts("diff.previous_file").join(" / "), label: "Previous file" },
@@ -1239,7 +1239,7 @@ function DiffViewerHelpDialog(props: { context: Plugin.Context; single: boolean;
       ],
     },
     {
-      title: "Scroll",
+      title: t("Scroll"),
       rows: [
         { shortcut: shortcut("diff.down", "diff.up"), label: "Down / up" },
         { shortcut: shortcut("diff.half_page.down", "diff.half_page.up"), label: "Half page down / up" },
@@ -1248,7 +1248,7 @@ function DiffViewerHelpDialog(props: { context: Plugin.Context; single: boolean;
       ],
     },
     {
-      title: "View",
+      title: t("View"),
       rows: [
         { shortcut: shortcut("diff.toggle_view"), label: "Split / unified" },
         { shortcut: shortcut("diff.single_patch"), label: "All files / single file" },
@@ -1257,7 +1257,7 @@ function DiffViewerHelpDialog(props: { context: Plugin.Context; single: boolean;
         ...(props.fullscreen
           ? [{ shortcut: shortcut("diff.toggle_fullscreen"), label: "Full screen / split view" }]
           : []),
-        { shortcut: () => props.context.keymap.shortcuts("diff.close").join(" / "), label: "Close diff viewer" },
+        { shortcut: () => props.context.keymap.shortcuts("diff.close").join(" / "), label: t("Close diff viewer") },
       ],
     },
   ]

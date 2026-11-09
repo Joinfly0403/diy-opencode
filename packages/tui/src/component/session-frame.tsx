@@ -6,6 +6,7 @@ import {
   type Renderable,
   type ScrollBoxRenderable,
 } from "@opentui/core"
+import { t } from "../i18n.js"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { batch, createEffect, createMemo, createResource, createSignal, on, onCleanup, Show } from "solid-js"
 import { useConfig } from "../config"
@@ -167,13 +168,13 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
     commands: [
       {
         id: "pane.focus.left",
-        title: "Focus session pane",
+        title: t("Focus session pane"),
         enabled: () => !fullscreen(),
         run: focusSession,
       },
       {
         id: "pane.focus.right",
-        title: "Focus right pane",
+        title: t("Focus right pane"),
         run: focusRightPane,
       },
     ],
@@ -219,7 +220,7 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
             },
             {
               id: "terminal.select",
-              title: "Select terminal",
+              title: t("Select terminal"),
               group: "Session",
               palette: true as const,
               run: () => {
@@ -232,7 +233,7 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
             },
             {
               id: "terminal.close",
-              title: "Close terminal pane",
+              title: t("Close terminal pane"),
               group: "Session",
               palette: true as const,
               enabled: rightPane() === "terminal",
@@ -244,7 +245,7 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
             },
             {
               id: "session.terminal",
-              title: "New terminal",
+              title: t("New terminal"),
               group: "Session",
               palette: true as const,
               slash: { name: "terminal" },

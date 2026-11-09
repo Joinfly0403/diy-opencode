@@ -1,4 +1,5 @@
 import type { SessionStatsInfo } from "@opencode/client"
+import { t } from "../../i18n.js"
 import { Plugin } from "@opencode/plugin/tui"
 import { activityCalendar } from "@opencode/util/activity-calendar"
 import { TextAttributes } from "@opentui/core"
@@ -149,7 +150,7 @@ function StatsPage(props: { context: Plugin.Context; onClose: () => void }) {
   const theme = useTheme()
 
   props.context.keymap.layer(() => ({
-    commands: [{ bind: "escape", title: "back", run: props.onClose }],
+    commands: [{ bind: "escape", title: t("back"), run: props.onClose }],
   }))
 
   return (
@@ -195,7 +196,7 @@ export default Plugin.define({
           commands: [
             {
               id: "stats.open",
-              title: "Usage statistics",
+              title: t("Usage statistics"),
               group: "System",
               slash: { name: "stats" },
               palette: true,

@@ -258,7 +258,7 @@ export function Session(props: {
   Keymap.createLayer(() => ({
     priority: 10,
     enabled: () => props.sidebarVisible && dimensions().width - props.verticalTabsWidth <= 120 && !disabled(),
-    commands: [{ bind: "escape,ctrl+c", title: "Close sidebar", group: "Session", run: props.onToggleSidebar }],
+    commands: [{ bind: "escape,ctrl+c", title: t("Close sidebar"), group: "Session", run: props.onToggleSidebar }],
   }))
   const contentWidth = createMemo(() => (props.width ?? dimensions().width - props.verticalTabsWidth) - 4)
   const models = createMemo(() => data.location.model.list(location()) ?? [])
@@ -806,7 +806,7 @@ export function Session(props: {
         actions={[
           {
             command: "queued_prompt.delete",
-            title: "delete",
+            title: t("delete"),
             onTrigger: (option) => {
               const last = queuedPrompts().length === 1
               void mutatePending("cancel", option.value).then((cancelled) => {
@@ -816,7 +816,7 @@ export function Session(props: {
           },
           {
             command: "queued_prompt.undo",
-            title: "undo",
+            title: t("undo"),
             onTrigger: (option) => {
               const target = prompt()
               const queued = queuedPrompts().find((item) => item.id === option.value)
@@ -833,7 +833,7 @@ export function Session(props: {
                 })
                 .catch((error) =>
                   toast.show({
-                    title: "Failed to undo pending prompt",
+                    title: t("Failed to undo pending prompt"),
                     message: errorMessage(error),
                     variant: "error",
                   }),
@@ -841,7 +841,7 @@ export function Session(props: {
             },
           },
         ]}
-        footerHints={[{ title: "steer", label: "enter", group: "primary" }]}
+        footerHints={[{ title: t("steer"), label: "enter", group: "primary" }]}
       />
     ))
   const alignMessage = (messageID: string, top: number) => {
@@ -929,42 +929,42 @@ export function Session(props: {
   const globalCommands = [
     {
       id: "session.page.up",
-      title: "Page up",
+      title: t("Page up"),
       group: "Session",
       palette: undefined,
       run: () => moveTranscript(-scroll.height / 2),
     },
     {
       id: "session.page.down",
-      title: "Page down",
+      title: t("Page down"),
       group: "Session",
       palette: undefined,
       run: () => moveTranscript(scroll.height / 2),
     },
     {
       id: "session.line.up",
-      title: "Line up",
+      title: t("Line up"),
       group: "Session",
       palette: undefined,
       run: () => moveTranscript(-1),
     },
     {
       id: "session.line.down",
-      title: "Line down",
+      title: t("Line down"),
       group: "Session",
       palette: undefined,
       run: () => moveTranscript(1),
     },
     {
       id: "session.half.page.up",
-      title: "Half page up",
+      title: t("Half page up"),
       group: "Session",
       palette: undefined,
       run: () => moveTranscript(-scroll.height / 4),
     },
     {
       id: "session.half.page.down",
-      title: "Half page down",
+      title: t("Half page down"),
       group: "Session",
       palette: undefined,
       run: () => moveTranscript(scroll.height / 4),
@@ -974,7 +974,7 @@ export function Session(props: {
   const baseAndUnfocusedCommands = [
     {
       id: "session.first",
-      title: "First message",
+      title: t("First message"),
       group: "Session",
       palette: undefined,
       run: () => {
@@ -1042,7 +1042,7 @@ export function Session(props: {
     },
     {
       id: "session.last",
-      title: "Last message",
+      title: t("Last message"),
       group: "Session",
       palette: undefined,
       run: () => {
@@ -1054,7 +1054,7 @@ export function Session(props: {
 
   const baseCommands = createMemo(() => [
     {
-      title: "Rename session",
+      title: t("Rename session"),
       id: "session.rename",
       group: "Session",
       slash: { name: "rename", arguments: true as const },
@@ -1069,7 +1069,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Jump to message",
+      title: t("Jump to message"),
       id: "session.timeline",
       group: "Session",
       slash: { name: "timeline" },
@@ -1078,7 +1078,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Fork session",
+      title: t("Fork session"),
       id: "session.fork",
       group: "Session",
       slash: { name: "fork" },
@@ -1119,7 +1119,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Undo previous message",
+      title: t("Undo previous message"),
       id: "session.undo",
       group: "Session",
       slash: { name: "undo" },
@@ -1146,7 +1146,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Redo",
+      title: t("Redo"),
       id: "session.redo",
       group: "Session",
       enabled: !!session()?.revert?.messageID,
@@ -1181,7 +1181,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Toggle session scrollbar",
+      title: t("Toggle session scrollbar"),
       id: "session.toggle.scrollbar",
       group: "Session",
       palette: undefined,
@@ -1224,7 +1224,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Jump to last user message",
+      title: t("Jump to last user message"),
       id: "session.messages_last_user",
       group: "Session",
       palette: undefined,
@@ -1244,28 +1244,28 @@ export function Session(props: {
       },
     },
     {
-      title: "Next message",
+      title: t("Next message"),
       id: "session.message.next",
       group: "Session",
       palette: undefined,
       run: () => scrollToMessage("next", dialog),
     },
     {
-      title: "Previous message",
+      title: t("Previous message"),
       id: "session.message.previous",
       group: "Session",
       palette: undefined,
       run: () => scrollToMessage("prev", dialog),
     },
     {
-      title: "Next user message",
+      title: t("Next user message"),
       id: "session.message.user.next",
       group: "Session",
       palette: undefined,
       run: () => scrollToMessage("next", dialog, true),
     },
     {
-      title: "Previous user message",
+      title: t("Previous user message"),
       id: "session.message.user.previous",
       group: "Session",
       palette: undefined,
@@ -1315,7 +1315,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Copy session ID",
+      title: t("Copy session ID"),
       id: "session.copy.id",
       group: "Session",
       run: () => {
@@ -1327,7 +1327,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Copy session transcript",
+      title: t("Copy session transcript"),
       id: "session.copy",
       group: "Session",
       run: async () => {
@@ -1345,7 +1345,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Export session transcript",
+      title: t("Export session transcript"),
       id: "session.export",
       group: "Session",
       slash: {
@@ -1389,7 +1389,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Background blocking tools",
+      title: t("Background blocking tools"),
       id: "session.background",
       group: "Session",
       palette: undefined,
@@ -1399,7 +1399,7 @@ export function Session(props: {
       },
     },
     {
-      title: "Toggle subagent picker",
+      title: t("Toggle subagent picker"),
       id: "session.child.first",
       group: "Session",
       run: () => {
@@ -1409,14 +1409,14 @@ export function Session(props: {
       },
     },
     {
-      title: "View queued prompts",
+      title: t("View queued prompts"),
       id: "session.queued_prompts",
       group: "Prompt",
       enabled: queuedPrompts().length > 0,
       run: openQueuedPrompts,
     },
     {
-      title: "Go to parent session",
+      title: t("Go to parent session"),
       id: "session.parent",
       group: "Session",
       palette: undefined,
@@ -2407,8 +2407,8 @@ function UserMessage(props: { message: SessionMessageUser }) {
                   title="Pending steer"
                   renderFilter={!newDesigns()}
                   options={[
-                    { title: "Move to queue", value: "queue" as const },
-                    { title: "Delete", value: "cancel" as const },
+                    { title: t("Move to queue"), value: "queue" as const },
+                    { title: t("Delete"), value: "cancel" as const },
                   ]}
                   onSelect={(option) => {
                     void updatePendingSteer(option.value)
