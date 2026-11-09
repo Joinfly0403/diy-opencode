@@ -27,14 +27,14 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if self.path.startswith("/chat/modles"):
+        if self.path.endswith("/chat/modles"):
             self._json(MODELS)
-        elif self.path.startswith("/v1/models"):
+        elif self.path.endswith("/models"):
             self._json({"object": "list", "data": [
                 {"id": "mock-chat", "object": "model", "owned_by": "mock"},
                 {"id": "mock-chat-large", "object": "model", "owned_by": "mock"},
             ]})
-        elif self.path.startswith("/oauth2/authorize"):
+        elif self.path.endswith("/oauth2/authorize"):
             self.send_response(200)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.end_headers()
@@ -45,13 +45,13 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(length).decode("utf-8") if length else "{}"
-        if self.path.startswith("/oauth/getToken"):
+        if self.path.endswith("/oauth/getToken"):
             self._json({"access_token": TOKEN, "refresh_token": "mock-refresh", "userAccount": ACCOUNT})
             return
-        if self.path.startswith("/auth/internal/getUserDetail"):
+        if self.path.endswith("/auth/internal/getUserDetail"):
             self._json({"data": {"w3account": ACCOUNT, "region": "y", "departmentPath": "000/111/222"}})
             return
-        if self.path.startswith("/chat/completions"):
+        if self.path.endswith("/chat/completions"):
             try:
                 body = json.loads(raw)
             except ValueError:

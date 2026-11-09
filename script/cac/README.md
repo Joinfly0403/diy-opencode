@@ -18,16 +18,23 @@
 3. `OPENCODE_CONFIG_CONTENT` 注入生效：`bun src/index.ts --standalone models` 输出
    `cac/mock-chat`、`cac/mock-chat-large`、`cac/mock-flash`
 
-## 已知问题（未解决）
+## 原生插件（已实现）
 
-```
-Error: Unsupported package for cac/mock-chat:
-```
+配置声明的 provider 不会把 package 写进 model 记录，所以必须有插件。
+插件在 `packages/core/src/plugin/provider/cac.ts`：
 
-配置里给 provider 和 model 都写了 `package`，但解析到的 package 是空串。
-下一步要查 `packages/core/src/model-resolver.ts` 里 `model.package` 的来源
-（很可能是 config 声明的 provider 不会写入 model.package，需要由 provider 插件在
-`providers.add`/`providers.models.update` 时显式设置）。
+- 读 `/etc/cogagent/cac.json`（或 `COGAGENT_CAC_CONFIG`）
+- 令牌与模型清单来自环境 `COGAGENT_CAC_TOKEN` / `COGAGENT_CAC_MODELS`（包装层注入，ptrace_scope=1 下同 UID 读不到）
+- `providers.add({ info, models })`，每个 model 显式带 `package`
+- 请求头由 provider 的 headers 注入
+
+单元测试：`packages/core/test/plugin/provider-cac.test.ts`（8 项，全绿）。
+
+真实对话在 mock 下已验证：
+
+    > build · mock-chat
+    你好，我是 mock 模型
+    [mock] "POST /api/v2/chat/completions HTTP/1.1" 200
 
 ## 本地复现
 

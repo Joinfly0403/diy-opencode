@@ -221,43 +221,10 @@ def fetch_models(cfg, opener, token):
 
 
 def build_config(cfg, token, models):
-    base = cfg["snapengine"][token["area"]].rstrip("/")
-    model_map = {}
-    for m in models:
-        entry = {
-            "name": m["name"],
-            "package": "@opencode/ai/providers/openai-compatible",
-            "capabilities": {"tools": True, "input": ["text"], "output": ["text"], "temperature": True},
-        }
-        if m.get("context"):
-            entry["limit"] = {"context": m["context"]}
-        model_map[m["id"]] = entry
+    # provider 与模型由 cac 插件注册（package 只能由插件写入 model 记录）
     return {
         "$schema": "https://opencode.ai/config.json",
         "model": PROVIDER_ID + "/" + models[0]["id"],
-        "provider": {
-            PROVIDER_ID: {
-                "name": "CAC CodeAgent",
-                "package": "@opencode/ai/providers/openai-compatible",
-                "settings": {
-                    "baseURL": base,
-                    "provider": PROVIDER_ID,
-                    "apiKey": token["accessToken"],
-                },
-                "headers": {
-                    "x-auth-token": token["accessToken"],
-                    "x-codeagent-request-kind": "main_conversation",
-                    "x-error-propagation": "true",
-                    "app-id": cfg["clientId"],
-                    "plugin-version": cfg["headers"]["pluginVersion"],
-                    "kernel-version": cfg["headers"]["kernelVersion"],
-                    "x-agent-client-version": cfg["headers"]["clientVersion"],
-                    "x-agent-user-account": token.get("account") or "",
-                    "x-agent-user-department": token.get("department") or "",
-                },
-                "models": model_map,
-            }
-        },
         "permission": {"edit": "allow", "bash": {"*": "ask"}, "external_directory": "ask"},
     }
 
@@ -282,6 +249,9 @@ def main():
 
     env = dict(os.environ)
     env["OPENCODE_CONFIG_CONTENT"] = json.dumps(build_config(cfg, token, models), ensure_ascii=False)
+    env["COGAGENT_CAC_TOKEN"] = json.dumps(token, ensure_ascii=False)
+    env["COGAGENT_CAC_MODELS"] = json.dumps(models, ensure_ascii=False)
+    env["COGAGENT_CAC_CONFIG"] = CFG_PATH
     env["XDG_CONFIG_HOME"] = os.path.join(root, "config")
     env["XDG_DATA_HOME"] = os.path.join(root, "share")
     env["XDG_STATE_HOME"] = os.path.join(root, "state")
