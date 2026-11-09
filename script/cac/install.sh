@@ -51,6 +51,9 @@ install -d -m 0755 "$LIB"
 install -m 0755 "$BIN_SRC" "$LIB/cogagent"
 install -d -m 0755 "$(dirname "$BIN")"
 install -m 0755 "$SRC/cogagent" "$BIN"
+if [ -f "$SRC/cogagent-local" ]; then
+  install -m 0755 "$SRC/cogagent-local" "$(dirname "$BIN")/cogagent-local"
+fi
 
 echo "== 4/7 安装配置（cac.json + 空 cert.pem 占位）"
 install -d -m 0755 -o root -g root "$ETC"

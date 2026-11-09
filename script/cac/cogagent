@@ -339,6 +339,10 @@ def main():
     env["XDG_DATA_HOME"] = os.path.join(root, "share")
     env["XDG_STATE_HOME"] = os.path.join(root, "state")
     env["XDG_CACHE_HOME"] = os.path.join(root, "cache")
+    ca = cfg.get("caPath") or ""
+    if ca and os.path.exists(ca) and os.path.getsize(ca) > 0:
+        env["NODE_EXTRA_CA_CERTS"] = ca
+        env["SSL_CERT_FILE"] = ca
     env["COGAGENT_ROOT"] = root
     temp = os.path.join(root, "tmp")
     env["TMPDIR"] = temp

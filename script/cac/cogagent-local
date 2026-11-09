@@ -1,0 +1,28 @@
+#!/bin/bash
+# 本地模式：不登录、不用华为域账号，直接用第三方 API（自己的 key）。
+# 数据全部放在当前 OS 用户的 ~/.cogagent 下，按 OS 账号天然隔离。
+set -euo pipefail
+
+BIN="${COGAGENT_BIN:-/usr/local/lib/cogagent/cogagent}"
+[ -x "$BIN" ] || { echo "[cogagent-local] 找不到可执行文件: $BIN" >&2; exit 1; }
+
+ROOT="${COGAGENT_LOCAL_ROOT:-$HOME/.cogagent}"
+mkdir -p "$ROOT/config" "$ROOT/data" "$ROOT/state" "$ROOT/cache" "$ROOT/tmp"
+chmod 700 "$ROOT"
+
+export XDG_CONFIG_HOME="$ROOT/config"
+export XDG_DATA_HOME="$ROOT/data"
+export XDG_STATE_HOME="$ROOT/state"
+export XDG_CACHE_HOME="$ROOT/cache"
+export TMPDIR="$ROOT/tmp"
+export COGAGENT_MODE=local
+
+if [ -z "${DEEPSEEK_API_KEY:-}${OPENAI_API_KEY:-}${ANTHROPIC_API_KEY:-}${GEMINI_API_KEY:-}" ]; then
+  echo "[cogagent-local] 提示：未检测到第三方 key。" >&2
+  echo "  用法一： DEEPSEEK_API_KEY=sk-xxx cogagent-local" >&2
+  echo "  用法二： 写 $ROOT/config/opencode/opencode.jsonc" >&2
+  echo "  文档：   参见 provider 配置" >&2
+fi
+
+echo "[cogagent-local] 本地模式（无需华为账号）  数据目录: $ROOT" >&2
+exec "$BIN" "$@"
