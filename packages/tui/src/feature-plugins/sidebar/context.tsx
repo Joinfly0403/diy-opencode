@@ -1,4 +1,5 @@
 import { Plugin } from "@opencode/plugin/tui"
+import { t } from "../../i18n.js"
 import { createMemo, Show } from "solid-js"
 import { contextUsage } from "../../util/session"
 
@@ -28,13 +29,13 @@ export function SidebarContext(props: { context: Plugin.Context; sessionID: stri
             <>
               <text fg={theme.text.muted}>{value().tokens.toLocaleString()} tokens</text>
               <Show when={value().percent !== undefined}>
-                <text fg={theme.text.muted}>{value().percent}% used</text>
+                <text fg={theme.text.muted}>{value().percent}% {t("used")}</text>
               </Show>
             </>
           )}
         </Show>
         <Show when={cost() > 0}>
-          <text fg={theme.text.muted}>{money.format(cost())} spent</text>
+          <text fg={theme.text.muted}>{money.format(cost())} {t("spent")}</text>
         </Show>
       </box>
     </Show>

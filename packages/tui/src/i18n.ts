@@ -171,7 +171,9 @@ const zh: Record<string, string> = {
   "Toggle subagent picker": "显示/隐藏子代理选择",
   "View queued prompts": "查看排队消息",
   "Go to parent session": "回到父会话",
-  "Move to queue": "移入队列"
+  "Move to queue": "移入队列",
+  "used": "已用",
+  "spent": "已花费"
   }
 
 export function t(text: string): string {
