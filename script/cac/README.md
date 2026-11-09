@@ -70,3 +70,27 @@ python3 script/cac/cogagent models
 | 从仓库根启动 TUI | `Cannot find module 'react/jsx-dev-runtime'` | 包装层 `os.chdir` 到工作区 |
 | 沙箱内起后台服务失败 | `NodeHttpServer` 报错 | 包装层默认加 `--standalone` |
 | 逐个遮蔽兄弟目录 | 属主不同时 mount 被拒 | 改为遮蔽父目录 + bind 回自己 |
+
+
+## 编译单文件（Linux）
+
+原 `packages/cli/script/build.ts` 已随发布面一起删除，最小替代是
+`packages/cli/script/build-linux.ts`。
+
+    # 构建机先装全平台原生包（交叉编译需要）
+    bun install --os="*" --cpu="*" --libc="*"
+
+    # 交叉编译
+    TARGET=bun-linux-arm64 bun packages/cli/script/build-linux.ts
+    TARGET=bun-linux-x64   bun packages/cli/script/build-linux.ts
+
+产物在 `dist/cogagent-linux-<arch>`。
+
+脚本里有两个从原 build.ts 继承下来的补丁，缺一不可：
+
+| 插件 | 解决什么 |
+|---|---|
+| `ws-named-reexports` | Bun 在 sideEffects-free 模块里丢掉 `export * from "ws"`，编译后 NodeWS 具名导出为空 |
+| `plugin-runtime-static` | 编译后二进制没有 node_modules，插件运行时模块必须在构建期解析成静态表 |
+
+已验证：x64 产物 `--version` 输出 `opencode vlocal`；arm64 产物为 ELF aarch64 可执行文件。
