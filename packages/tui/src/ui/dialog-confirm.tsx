@@ -1,4 +1,5 @@
 import { Keymap } from "../context/keymap"
+import { t } from "../i18n.js"
 import { useTheme } from "../context/theme"
 import { useNewDesigns } from "../config"
 import { DialogHeader, DialogLayout, useDialog } from "./dialog"
@@ -65,7 +66,7 @@ export function DialogConfirm(props: DialogConfirmProps) {
   }))
   return (
     <DialogLayout
-      header={<DialogHeader title={props.title} />}
+      header={<DialogHeader title={props.title ? t(props.title) : undefined} />}
       footer={{
         actions: {
           primary: [

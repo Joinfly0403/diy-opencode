@@ -1,4 +1,5 @@
 import { TextareaRenderable } from "@opentui/core"
+import { t } from "../i18n.js"
 import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
 import { DialogFooter, DialogHeader, DialogLayout, useDialog, type DialogSize } from "./dialog"
@@ -132,7 +133,7 @@ export function DialogPrompt(props: DialogPromptProps) {
       footerGap={2}
       header={
         <DialogHeader
-          title={props.title}
+          title={props.title ? t(props.title) : undefined}
           description={props.subtitle}
           onClose={() => {
             if (!props.busy) (props.onCancel ?? dialog.clear)()
@@ -167,7 +168,7 @@ export function DialogPrompt(props: DialogPromptProps) {
             setTextareaTarget(val)
           }}
           initialValue={props.value}
-          placeholder={props.placeholder ?? "Enter text"}
+          placeholder={props.placeholder ? t(props.placeholder) : t("Enter text")}
           placeholderColor={theme.text.muted}
           textColor={props.busy ? theme.text.formfield.disabled : theme.text.formfield.base}
           focusedTextColor={props.busy ? theme.text.formfield.disabled : theme.text.formfield.base}

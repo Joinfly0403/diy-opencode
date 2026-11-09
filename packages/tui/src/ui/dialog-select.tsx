@@ -6,6 +6,7 @@ import { batch, createEffect, createMemo, createSignal, For, Show, type JSX, on,
 import { createStore } from "solid-js/store"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import * as fuzzysort from "fuzzysort"
+import { t } from "../i18n.js"
 import { isDeepEqual } from "remeda"
 import {
   DIALOG_INSET,
@@ -700,9 +701,9 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
             fallback={
               <>
                 <DialogHeader
-                  title={props.title}
+                  title={props.title ? t(props.title) : undefined}
                   titleView={props.titleView}
-                  description={props.description}
+                  description={props.description ? t(props.description) : undefined}
                   onClose={props.onCancel}
                 />
                 <Show when={props.renderFilter !== false}>
@@ -809,7 +810,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
                           }}
                         >
                           <DialogSelectRow
-                            title={option.title}
+                            title={t(option.title ?? "")}
                             titleView={option.titleView}
                             footer={
                               flatten() ? (option.searchFooter ?? option.category ?? option.footer) : option.footer
@@ -818,7 +819,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
                             footerOverhang={option.footerOverhang}
                             titleWidth={option.titleWidth}
                             truncateTitle={option.truncateTitle}
-                            description={option.description !== category ? option.description : undefined}
+                            description={option.description !== category && option.description ? t(option.description) : undefined}
                             active={active()}
                             current={current()}
                             activeBackground={option.bg}

@@ -1,4 +1,5 @@
 import { Keymap } from "../context/keymap"
+import { t } from "../i18n.js"
 import { useTheme } from "../context/theme"
 import { DialogHeader, DialogLayout, useDialog } from "./dialog"
 
@@ -30,7 +31,7 @@ export function DialogAlert(props: DialogAlertProps) {
   }))
   return (
     <DialogLayout
-      header={<DialogHeader title={props.title} />}
+      header={<DialogHeader title={props.title ? t(props.title) : undefined} />}
       footer={{ actions: { primary: [{ title: "ok", key: "enter", onTrigger: confirm }] } }}
       legacyFooter={
         <box flexDirection="row" justifyContent="flex-end">
