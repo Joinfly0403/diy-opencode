@@ -298,7 +298,7 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
             width={sessionWidth()}
           />
         </InteractivityProvider>
-        <Show when={activePane() === "right"}>
+        <Show when={true}>
           <box
             position="absolute"
             left={0}
