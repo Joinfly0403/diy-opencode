@@ -331,7 +331,9 @@ def main():
     print("[cogagent] 账号 " + token["account"] + "  区域 " + token["area"] + "  模型 " + str(len(models)) + " 个", flush=True)
 
     env = dict(os.environ)
-    env["OPENCODE_CONFIG_CONTENT"] = json.dumps(build_config(cfg, token, models), ensure_ascii=False)
+    content = json.dumps(build_config(cfg, token, models), ensure_ascii=False)
+    env["COGAGENT_CONFIG_CONTENT"] = content
+    env["OPENCODE_CONFIG_CONTENT"] = content  # 旧名，兼容未升级的构建
     env["COGAGENT_CAC_TOKEN"] = json.dumps(token, ensure_ascii=False)
     env["COGAGENT_CAC_MODELS"] = json.dumps(models, ensure_ascii=False)
     env["COGAGENT_CAC_CONFIG"] = CFG_PATH

@@ -1,5 +1,6 @@
 export * as Config from "./config"
 
+import { Env } from "@opencode/util/env"
 import { Global } from "@opencode/util/global"
 import { Flock } from "@opencode/util/flock"
 import { Context, Effect, FileSystem, Layer, Option, Schema } from "effect"
@@ -29,9 +30,8 @@ export const layer = Layer.effect(
     const fs = yield* FileSystem.FileSystem
     const global = yield* Global.Service
     const file = path.join(global.config, "cli.json")
-    const content = process.env.OPENCODE_CLI_CONFIG_CONTENT
-      ? Option.getOrUndefined(decode(parseRecord(process.env.OPENCODE_CLI_CONFIG_CONTENT)))
-      : undefined
+    const raw = Env.read("CLI_CONFIG_CONTENT")
+    const content = raw ? Option.getOrUndefined(decode(parseRecord(raw))) : undefined
 
     const readJson = Effect.fnUntraced(function* () {
       const text = yield* fs.readFileString(file).pipe(Effect.orElseSucceed(() => undefined))

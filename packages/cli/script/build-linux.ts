@@ -85,7 +85,7 @@ const ptyPlugin: BunPlugin = {
 const result = await Bun.build({
   entrypoints: [path.join(dir, "src/index.ts")],
   target: "bun",
-  compile: { target, outfile },
+  compile: { target: target as Parameters<typeof Bun.build>[0]["compile"] extends { target?: infer T } ? T : never, outfile },
   plugins: [createSolidTransformPlugin(), wsReexportPlugin, pluginRuntimePlugin, ptyPlugin],
   define: {
     "process.env.OPENCODE_CLI_NAME": JSON.stringify("cogagent"),
