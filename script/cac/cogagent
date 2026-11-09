@@ -97,7 +97,7 @@ def running_cores():
                 cmd = f.read().replace(b"\x00", b" ").decode("utf-8", "replace")
         except OSError:
             continue
-        if "cogagent-core" in cmd or "cogagent" in cmd.split(" ")[0]:
+        if "/usr/local/lib/cogagent/cogagent" in cmd or "cogagent-core" in cmd:
             pids.append(int(name))
     return [p for p in pids if p != os.getpid()]
 
@@ -244,7 +244,7 @@ def build_config(cfg, token, models):
 
 
 def ensure_dirs(root):
-    for sub in ("config", "share", "share/workspace", "state", "cache", "logs"):
+    for sub in ("config", "share", "share/workspace", "state", "cache", "logs", "tmp"):
         os.makedirs(os.path.join(root, sub), mode=0o700, exist_ok=True)
     os.chmod(root, 0o700)
 
@@ -340,6 +340,10 @@ def main():
     env["XDG_STATE_HOME"] = os.path.join(root, "state")
     env["XDG_CACHE_HOME"] = os.path.join(root, "cache")
     env["COGAGENT_ROOT"] = root
+    temp = os.path.join(root, "tmp")
+    env["TMPDIR"] = temp
+    env["TMP"] = temp
+    env["TEMP"] = temp
     env["COGAGENT_CMD"] = CORE_CMD + (" " + " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "")
 
     binary = CORE_CMD.split()[1] if CORE_CMD.startswith("exec ") else CORE_CMD.split()[0]
