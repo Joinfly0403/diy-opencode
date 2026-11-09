@@ -1,0 +1,298 @@
+#!/usr/bin/env python3
+# cogagent 包装层：登录 -> 建目录 -> 进沙箱 -> 注入 provider 配置 -> 启动 TUI
+# 说明：令牌只经环境变量 OPENCODE_CONFIG_CONTENT 传入子进程，不落盘。
+#       （环境变量受 ptrace_scope=1 保护，同 UID 非父进程读不到 /proc/<pid>/environ）
+import json
+import os
+import ssl
+import sys
+import time
+import urllib.error
+import urllib.request
+import uuid
+from urllib.parse import quote
+
+CFG_PATH = os.environ.get("COGAGENT_CAC_CONFIG", "/etc/cogagent/cac.json")
+SANDBOX = os.environ.get("COGAGENT_SANDBOX", "/usr/local/lib/cogagent/sandbox.sh")
+CORE_CMD = os.environ.get("COGAGENT_CMD", "exec /usr/local/lib/cogagent/cogagent")
+PROVIDER_ID = "cac"
+
+
+def die(msg, code=1):
+    print("[cogagent] " + msg, file=sys.stderr)
+    sys.exit(code)
+
+
+def load_cfg():
+    try:
+        with open(CFG_PATH, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+    except OSError as e:
+        die("读不到配置 " + CFG_PATH + ": " + str(e))
+    except ValueError as e:
+        die("配置不是合法 JSON: " + str(e))
+    for key in ("apiBase", "authBase", "clientId", "scope", "scopeResource"):
+        if not cfg.get(key):
+            die("配置缺少字段: " + key)
+    cfg.setdefault("responseType", "code")
+    cfg.setdefault("caPath", "/etc/cogagent/cert.pem")
+    cfg.setdefault("rootBase", "/srv/cogagent/users")
+    cfg.setdefault("timeouts", {})
+    cfg["timeouts"].setdefault("loginSeconds", 300)
+    cfg["timeouts"].setdefault("pollSeconds", 1)
+    return cfg
+
+
+def make_opener(cfg):
+    ctx = ssl.create_default_context()
+    ca = cfg.get("caPath")
+    if ca and os.path.exists(ca):
+        try:
+            ctx.load_verify_locations(cafile=ca)
+        except (ssl.SSLError, OSError) as e:
+            print("[cogagent] 警告：加载 CA 失败 " + str(e), file=sys.stderr)
+    return urllib.request.build_opener(
+        urllib.request.ProxyHandler({}),
+        urllib.request.HTTPSHandler(context=ctx),
+    )
+
+
+def http_json(opener, method, url, body=None, headers=None, timeout=60):
+    data = None
+    hdrs = dict(headers or {})
+    if body is not None:
+        data = json.dumps(body).encode("utf-8")
+        hdrs.setdefault("Content-Type", "application/json")
+    req = urllib.request.Request(url, data=data, headers=hdrs, method=method)
+    try:
+        with opener.open(req, timeout=timeout) as resp:
+            return resp.status, resp.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8", "replace")
+    except Exception as e:
+        return 0, str(e)
+
+
+def running_cores():
+    pids = []
+    for name in os.listdir("/proc"):
+        if not name.isdigit():
+            continue
+        try:
+            with open("/proc/" + name + "/cmdline", "rb") as f:
+                cmd = f.read().replace(b"\x00", b" ").decode("utf-8", "replace")
+        except OSError:
+            continue
+        if "cogagent-core" in cmd or "cogagent" in cmd.split(" ")[0]:
+            pids.append(int(name))
+    return [p for p in pids if p != os.getpid()]
+
+
+def single_instance_check():
+    pids = running_cores()
+    if not pids:
+        return
+    print("[cogagent] 已有实例在运行（PID " + ", ".join(str(p) for p in pids) + "）")
+    print("[cogagent] 继续登录可能挤掉旧实例。继续？[y/N] ", end="", flush=True)
+    try:
+        answer = sys.stdin.readline().strip().lower()
+    except (KeyboardInterrupt, EOFError):
+        answer = ""
+    if answer not in ("y", "yes"):
+        die("已取消", 0)
+
+
+def login(cfg, opener):
+    api = cfg["apiBase"].rstrip("/")
+    auth = cfg["authBase"].rstrip("/")
+    client_code = uuid.uuid4().hex
+    redirect = api + "/oauth/callback?client_code=" + client_code
+    url = (
+        auth + "/oauth2/authorize"
+        + "?client_id=" + quote(cfg["clientId"], safe="")
+        + "&redirect_uri=" + quote(redirect, safe="")
+        + "&scope=" + str(cfg["scope"])
+        + "&response_type=" + str(cfg["responseType"])
+        + "&scope_resource=" + str(cfg["scopeResource"])
+    )
+    print("")
+    print("=" * 78, flush=True)
+    print("请在浏览器（任意机器）打开下面的链接，用 w3 账号登录授权：")
+    print("")
+    print(url)
+    print("")
+    print("=" * 78)
+    print("等待授权中（最多 " + str(cfg["timeouts"]["loginSeconds"]) + " 秒）...", flush=True)
+    deadline = time.time() + cfg["timeouts"]["loginSeconds"]
+    interval = float(cfg["timeouts"]["pollSeconds"])
+    warned = False
+    while time.time() < deadline:
+        code, raw = http_json(
+            opener, "POST", api + "/oauth/getToken",
+            {"clientCode": client_code, "redirectUrl": redirect}, timeout=8,
+        )
+        if code == 200:
+            try:
+                data = json.loads(raw)
+            except ValueError:
+                data = {}
+            token = data.get("access_token")
+            if token:
+                now = int(time.time() * 1000)
+                return {
+                    "accessToken": token,
+                    "refreshToken": data.get("refresh_token") or "",
+                    "expiresAt": now + 3 * 24 * 3600 * 1000,
+                    "account": data.get("userAccount") or "",
+                }
+        elif not warned:
+            print("[cogagent] 轮询 HTTP " + str(code) + "：" + raw[:160], file=sys.stderr)
+            warned = True
+        time.sleep(interval)
+    die("登录超时：未在限定时间内完成授权")
+
+
+def user_detail(cfg, opener, token):
+    api = cfg["apiBase"].rstrip("/")
+    code, raw = http_json(
+        opener, "POST", api + "/auth/internal/getUserDetail", {},
+        headers={"x-auth-token": token["accessToken"],
+                 "Agent-Type": cfg["headers"]["agentType"],
+                 "X-Language": "en-us"},
+        timeout=15,
+    )
+    if code != 200:
+        die("取用户信息失败 HTTP " + str(code) + ": " + raw[:300])
+    try:
+        payload = json.loads(raw)
+    except ValueError:
+        die("用户信息不是 JSON: " + raw[:200])
+    data = payload.get("data") or {}
+    if not token.get("account"):
+        token["account"] = data.get("w3account") or ""
+    if not token["account"]:
+        die("服务端没有返回账号，无法确定用户目录")
+    token["region"] = data.get("region") or ""
+    token["area"] = "yellow" if token["region"] == "y" else "green"
+    token["department"] = data.get("departmentPath") or ""
+    return token
+
+
+def fetch_models(cfg, opener, token):
+    api = cfg["apiBase"].rstrip("/")
+    code, raw = http_json(
+        opener, "GET", api + "/chat/modles",
+        headers={"x-auth-token": token["accessToken"],
+                 "Agent-Type": cfg["headers"]["agentType"],
+                 "area": token["area"],
+                 "plugin-version": cfg["headers"]["pluginVersion"],
+                 "X-Language": "en-us",
+                 "x-agent-client-version": cfg["headers"]["clientVersion"]},
+        timeout=30,
+    )
+    if code != 200:
+        die("拉模型清单失败 HTTP " + str(code) + ": " + raw[:300])
+    try:
+        items = json.loads(raw)
+    except ValueError:
+        die("模型清单不是 JSON: " + raw[:200])
+    models = []
+    for item in items if isinstance(items, list) else []:
+        alias = item.get("modelId") or item.get("name")
+        routes = item.get("routModels") or []
+        if isinstance(routes, str):
+            try:
+                routes = json.loads(routes)
+            except ValueError:
+                routes = []
+        big = next((r.get("modelId") for r in routes if r.get("modelLevel") == "large" and r.get("modelId")), None)
+        if alias:
+            models.append({"id": alias, "name": item.get("des") or alias, "context": item.get("context") or 0})
+        if big and big != alias:
+            models.append({"id": big, "name": big, "context": item.get("context") or 0})
+    seen = set()
+    unique = []
+    for m in models:
+        if m["id"] in seen:
+            continue
+        seen.add(m["id"])
+        unique.append(m)
+    return unique
+
+
+def build_config(cfg, token, models):
+    base = cfg["snapengine"][token["area"]].rstrip("/")
+    model_map = {}
+    for m in models:
+        entry = {
+            "name": m["name"],
+            "package": "@opencode/ai/providers/openai-compatible",
+            "capabilities": {"tools": True, "input": ["text"], "output": ["text"], "temperature": True},
+        }
+        if m.get("context"):
+            entry["limit"] = {"context": m["context"]}
+        model_map[m["id"]] = entry
+    return {
+        "$schema": "https://opencode.ai/config.json",
+        "model": PROVIDER_ID + "/" + models[0]["id"],
+        "provider": {
+            PROVIDER_ID: {
+                "name": "CAC CodeAgent",
+                "package": "@opencode/ai/providers/openai-compatible",
+                "settings": {
+                    "baseURL": base,
+                    "provider": PROVIDER_ID,
+                    "apiKey": token["accessToken"],
+                },
+                "headers": {
+                    "x-auth-token": token["accessToken"],
+                    "x-codeagent-request-kind": "main_conversation",
+                    "x-error-propagation": "true",
+                    "app-id": cfg["clientId"],
+                    "plugin-version": cfg["headers"]["pluginVersion"],
+                    "kernel-version": cfg["headers"]["kernelVersion"],
+                    "x-agent-client-version": cfg["headers"]["clientVersion"],
+                    "x-agent-user-account": token.get("account") or "",
+                    "x-agent-user-department": token.get("department") or "",
+                },
+                "models": model_map,
+            }
+        },
+        "permission": {"edit": "allow", "bash": {"*": "ask"}, "external_directory": "ask"},
+    }
+
+
+def ensure_dirs(root):
+    for sub in ("config", "share", "share/workspace", "state", "cache", "logs"):
+        os.makedirs(os.path.join(root, sub), mode=0o700, exist_ok=True)
+    os.chmod(root, 0o700)
+
+
+def main():
+    cfg = load_cfg()
+    opener = make_opener(cfg)
+    single_instance_check()
+    token = user_detail(cfg, opener, login(cfg, opener))
+    root = os.path.join(cfg["rootBase"].rstrip("/"), token["account"])
+    models = fetch_models(cfg, opener, token)
+    if not models:
+        die("模型清单为空")
+    ensure_dirs(root)
+    print("[cogagent] 账号 " + token["account"] + "  区域 " + token["area"] + "  模型 " + str(len(models)) + " 个", flush=True)
+
+    env = dict(os.environ)
+    env["OPENCODE_CONFIG_CONTENT"] = json.dumps(build_config(cfg, token, models), ensure_ascii=False)
+    env["XDG_CONFIG_HOME"] = os.path.join(root, "config")
+    env["XDG_DATA_HOME"] = os.path.join(root, "share")
+    env["XDG_STATE_HOME"] = os.path.join(root, "state")
+    env["XDG_CACHE_HOME"] = os.path.join(root, "cache")
+    env["COGAGENT_ROOT"] = root
+    env["COGAGENT_CMD"] = CORE_CMD + (" " + " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "")
+
+    workspace = os.path.join(root, "share", "workspace")
+    os.chdir(workspace)
+    os.execvpe("unshare", ["unshare", "-Urm", "bash", SANDBOX, root], env)
+
+
+if __name__ == "__main__":
+    main()
