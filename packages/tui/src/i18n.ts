@@ -177,7 +177,8 @@ const zh: Record<string, string> = {
   "keep working until an objective is met [pause|resume|clear]": "持续执行直到目标达成 [pause|resume|clear]",
   "guided AGENTS.md setup": "引导式生成 AGENTS.md",
   "Manage the session goal": "管理会话目标",
-  "review changes [commit|branch|pr], defaults to uncommitted": "审阅改动 [commit|branch|pr]，默认只看未提交"
+  "review changes [commit|branch|pr], defaults to uncommitted": "审阅改动 [commit|branch|pr]，默认只看未提交",
+  "schedule a prompt for later, or list, pause and delete this session's schedules": "稍后执行这条提示词，或列出、暂停、删除本会话的定时任务"
   }
 
 export function t(text: string): string
