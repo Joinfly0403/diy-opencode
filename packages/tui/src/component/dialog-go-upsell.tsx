@@ -1,4 +1,5 @@
 import { RGBA, TextAttributes, type Renderable } from "@opentui/core"
+import { t } from "../i18n.js"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import type { FormAnswer, IntegrationOauthConnectOutput, IntegrationOAuthMethod } from "@opencode/client"
 import * as Open from "@opencode/util/open"
@@ -386,7 +387,7 @@ function DialogGoUpsellConnect(props: { canContinue?: () => boolean; onSubscribe
     if (!current) return
     Open.openUrl(current.url).catch(() =>
       toast.show({
-        message: "Could not open the browser. Copy the URL and continue manually.",
+        message: t("Could not open the browser. Copy the URL and continue manually."),
         variant: "error",
       }),
     )
@@ -398,7 +399,7 @@ function DialogGoUpsellConnect(props: { canContinue?: () => boolean; onSubscribe
     const value = current.instructions.match(OAUTH_CODE)?.[0] ?? current.url
     clipboard
       .write(value)
-      .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
+      .then(() => toast.show({ message: t("Copied to clipboard"), variant: "info" }))
       .catch(toast.error)
   }
 

@@ -1,4 +1,5 @@
 import { ScrollBoxRenderable, TextareaRenderable } from "@opentui/core"
+import { t } from "../i18n.js"
 import { useTerminalDimensions } from "@opentui/solid"
 import type {
   ConnectionInfo,
@@ -673,7 +674,7 @@ function OAuthAuto(props: {
   const open = () => {
     openUrl(props.attempt.url).catch(() =>
       toast.show({
-        message: "Could not open the browser. Copy the URL and continue manually.",
+        message: t("Could not open the browser. Copy the URL and continue manually."),
         variant: "error",
       }),
     )
@@ -683,7 +684,7 @@ function OAuthAuto(props: {
     const value = props.attempt.instructions.match(OAUTH_CODE)?.[0] ?? props.attempt.url
     clipboard
       .write(value)
-      .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
+      .then(() => toast.show({ message: t("Copied to clipboard"), variant: "info" }))
       .catch(toast.error)
   }
 

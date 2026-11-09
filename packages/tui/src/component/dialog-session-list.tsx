@@ -1,4 +1,5 @@
 import { createMemo, createResource, createSignal, onMount, Show, type JSX } from "solid-js"
+import { t } from "../i18n.js"
 import path from "path"
 import type { SessionInfo } from "@opencode/client"
 import { Project } from "@opencode/schema/project"
@@ -120,7 +121,7 @@ export function DialogSessionList() {
         message: query ? "Could not search sessions. Change the search to try again." : "Could not load sessions.",
         error: true,
       }
-    return { message: query ? "No sessions found" : "No sessions available", error: false }
+    return { message: query ? t("No sessions found") : t("No sessions available"), error: false }
   })
 
   const quickSwitchHint = createMemo(() => {

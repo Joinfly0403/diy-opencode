@@ -1,4 +1,5 @@
 import { createMemo, createSignal, For } from "solid-js"
+import { t } from "../i18n.js"
 import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
 import { DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
@@ -43,7 +44,7 @@ export function DialogDebug() {
       .write(text)
       .then(() => {
         setCopied(true)
-        toast.show({ message: "Debug info copied to clipboard", variant: "info" })
+        toast.show({ message: t("Debug info copied to clipboard"), variant: "info" })
       })
       .catch(toast.error)
   }

@@ -49,7 +49,22 @@ const zh: Record<string, string> = {
     "Exit the app": "退出应用",
     "Toggle debug panel": "显示/隐藏调试面板",
     "Toggle console": "显示/隐藏控制台",
-    "Suspend terminal": "挂起终端"
+    "Suspend terminal": "挂起终端",
+  "Copied to clipboard": "已复制到剪贴板",
+  "Debug info copied to clipboard": "调试信息已复制到剪贴板",
+  "Restarting service…": "正在重启服务…",
+  "Service restarted": "服务已重启",
+  "Reloading configuration…": "正在重新加载配置…",
+  "Configuration reloaded": "配置已重新加载",
+  "Run /mcps to view details.": "运行 /mcps 查看详情。",
+  "The current model does not support any variants.": "当前模型不支持任何变体。",
+  "No sessions found": "未找到会话",
+  "No sessions available": "暂无会话",
+  "Allow once": "允许一次",
+  "Always allow": "始终允许",
+  "Reject": "拒绝",
+  "Getting started": "开始使用",
+  "Could not open the browser. Copy the URL and continue manually.": "无法打开浏览器，请复制链接手动继续。"
   }
 
 export function t(text: string): string {

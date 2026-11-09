@@ -566,7 +566,7 @@ function App() {
         toast.show({
           variant: "error",
           title: `MCP server failed: ${server.name}`,
-          message: "Run /mcps to view details.",
+          message: t("Run /mcps to view details."),
           action: { label: "Open MCP servers", run: () => keymap.dispatch("mcp.list") },
         })
     }
@@ -593,7 +593,7 @@ function App() {
 
     await clipboard
       .write(text)
-      .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
+      .then(() => toast.show({ message: t("Copied to clipboard"), variant: "info" }))
       .catch(toast.error)
 
     renderer.clearSelection()
@@ -989,7 +989,7 @@ function App() {
           if (local.model.variant.list().length === 0) {
             return toast.show({
               title: t("No variants available"),
-              message: "The current model does not support any variants.",
+              message: t("The current model does not support any variants."),
               variant: "info",
             })
           }
@@ -1068,11 +1068,11 @@ function App() {
                 const restart = client.restart
                 if (!restart) return
                 dialog.clear()
-                toast.show({ variant: "info", message: "Restarting service…", duration: 30000 })
+                toast.show({ variant: "info", message: t("Restarting service…"), duration: 30000 })
                 // restart resolves once the replacement service is healthy; the
                 // event stream reattaches through the reconnect loop.
                 await restart()
-                  .then(() => toast.show({ variant: "success", message: "Service restarted" }))
+                  .then(() => toast.show({ variant: "success", message: t("Service restarted") }))
                   .catch(toast.error)
               },
               category: "System",
@@ -1085,11 +1085,11 @@ function App() {
         slash: { name: "reload" },
         run: async () => {
           dialog.clear()
-          toast.show({ variant: "info", message: "Reloading configuration…", duration: 30000 })
+          toast.show({ variant: "info", message: t("Reloading configuration…"), duration: 30000 })
           await client.api.location
             .reload()
             .then(() => {
-              toast.show({ variant: "success", message: "Configuration reloaded" })
+              toast.show({ variant: "success", message: t("Configuration reloaded") })
             })
             .catch(toast.error)
         },
