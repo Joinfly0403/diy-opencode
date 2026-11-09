@@ -1,3 +1,17 @@
+## 这是什么项目
+
+当前项目是 **cogagent**（内部产品名，命令名也叫 `cogagent`），Linux-only 的终端 coding agent。
+它派生自 opencode，但已经不再跟随上游同步：中文界面、CAC 登录（华为 CodeAgentCLI）、
+用户级隔离、本地模式（`cogagent-local`，第三方 API）都属于本仓库自己的方向。
+
+写代码时注意：
+
+- 用户可见文案走 `packages/tui/src/i18n.ts` 的 `t()` / `L()`，默认中文、英文兜底
+- 运行时目录与配置文件已改名为 `cogagent`（`~/.local/share/cogagent`、`cogagent.db`、`cogagent.json(c)`）
+- `@opencode/*` 包名保持不动（内部 import，用户不可见）
+
+## 仓库约定
+
 - After changing the public Protocol or Server `HttpApi`, run `bun run generate` from `packages/client`. Do not edit generated client files directly.
 - Keep runtime dependencies directed from Schema to Core and Protocol, then from Core and Protocol to Server. Client runtime code may depend on Schema and Protocol but never Core or Server; `sdk` composes Client, Core, and Server.
 - This repository does not use Changesets. Do not add `.changeset` files; follow the existing release workflow instead.
