@@ -1,4 +1,8 @@
-export const SESSION_SIDEBAR_WIDTH = 42
+export const SESSION_SIDEBAR_WIDTH = 26
+export const SESSION_SIDEBAR_DEFAULT_WIDTH = 26
+export const SESSION_SIDEBAR_DRAG_MAX_WIDTH = 44
+// 侧栏可拖动时的默认与上限
+// 侧栏可拖动后的默认与上限：比正文侧栏更窄一些，避免一进来就占掉半屏
 export const SESSION_TABS_COMPACT_WIDTH = 5
 export const SESSION_TABS_COMPACT_BREAKPOINT = 12
 export const SESSION_SIDEBAR_MAX_WIDTH = 72

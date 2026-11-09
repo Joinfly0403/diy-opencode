@@ -20,7 +20,7 @@ import { useStorage } from "../context/storage"
 import { useDialog } from "../ui/dialog"
 import { Session } from "../routes/session"
 import { Sidebar } from "../routes/session/sidebar"
-import { clampSessionPaneWidth, SESSION_SIDEBAR_WIDTH } from "../ui/layout"
+import { clampSessionPaneWidth, SESSION_SIDEBAR_DEFAULT_WIDTH, SESSION_SIDEBAR_DRAG_MAX_WIDTH } from "../ui/layout"
 import { createPaneResize } from "../ui/pane-resize"
 import { PaneResizeHandle } from "../ui/pane-resize-handle"
 import { useToast } from "../ui/toast"
@@ -40,18 +40,27 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
   const dialog = useDialog()
   const availableWidth = () => Math.max(0, dimensions().width - props.verticalTabsWidth)
   const defaultPaneWidth = () => Math.max(1, Math.floor(panels.width() / 2))
-  const [layout, updateLayout] = useStorage().store<{ paneWidth?: number; terminalWidth?: number }>("layout", {
+  const [layout, updateLayout] = useStorage().store<{ paneWidth?: number; terminalWidth?: number; sidebarWidth?: number }>("layout", {
     initial: {},
   })
+  // rightPane 定义在下方；先用安全默认值，定义后再接上，避免初始化期 TDZ
+  let paneKind: () => string | undefined = () => "session"
   const paneResize = createPaneResize({
-    value: () => layout.paneWidth ?? layout.terminalWidth ?? defaultPaneWidth(),
+    value: () =>
+      paneKind() === "sidebar"
+        ? (layout.sidebarWidth ?? SESSION_SIDEBAR_DEFAULT_WIDTH)
+        : (layout.paneWidth ?? layout.terminalWidth ?? defaultPaneWidth()),
     defaultValue: defaultPaneWidth,
-    clamp: (width) => clampSessionPaneWidth(width, panels.width()),
+    clamp: (width) =>
+      paneKind() === "sidebar"
+        ? Math.max(20, Math.min(width, SESSION_SIDEBAR_DRAG_MAX_WIDTH, panels.width() - 44))
+        : clampSessionPaneWidth(width, panels.width()),
     fromMouse: (event) => dimensions().width - event.x - 1,
     contains: (event, width) => event.x >= dimensions().width - width - 1 && event.x <= dimensions().width - width,
     onCommit: (width) => {
       void updateLayout((draft) => {
-        draft.paneWidth = width
+        if (paneKind() === "sidebar") draft.sidebarWidth = width
+        else draft.paneWidth = width
       }).catch((error) => console.error("Failed to persist TUI layout", error))
     },
   })
@@ -116,6 +125,7 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
     if (selectedTerminal()) return "terminal"
     if (sidebarVisible()) return "sidebar"
   })
+  paneKind = rightPane
   const toggleSidebar = () => {
     batch(() => {
       const visible = rightPane() === "sidebar"
@@ -328,7 +338,7 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
           ref={(value: BoxRenderable) => (rightNode = value)}
           flexShrink={0}
           width={
-            fullscreen() ? availableWidth() : rightPane() === "sidebar" ? SESSION_SIDEBAR_WIDTH : paneResize.size()
+            fullscreen() ? availableWidth() : paneResize.size()
           }
           minWidth={0}
           minHeight={0}
@@ -380,7 +390,7 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
           </Show>
         </box>
       </Show>
-      <Show when={!fullscreen() && (rightPane() === "terminal" || rightPane() === "panel") && availableWidth() >= 3}>
+      <Show when={!fullscreen() && (rightPane() === "terminal" || rightPane() === "panel" || rightPane() === "sidebar") && availableWidth() >= 3}>
         <PaneResizeHandle resize={paneResize} left={availableWidth() - paneResize.size() - 1} highlight="right" />
       </Show>
       <Show when={rightPane() === "sidebar" && !wide()}>
