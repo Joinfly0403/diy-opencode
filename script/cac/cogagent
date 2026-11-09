@@ -3,6 +3,7 @@
 # 说明：令牌只经环境变量 OPENCODE_CONFIG_CONTENT 传入子进程，不落盘。
 #       （环境变量受 ptrace_scope=1 保护，同 UID 非父进程读不到 /proc/<pid>/environ）
 import ctypes
+import fcntl
 import json
 import os
 import ssl
@@ -18,6 +19,9 @@ from urllib.parse import quote
 CFG_PATH = os.environ.get("COGAGENT_CAC_CONFIG", "/etc/cogagent/cac.json")
 CORE_CMD = os.environ.get("COGAGENT_CMD", "exec /usr/local/lib/cogagent/cogagent")
 PROVIDER_ID = "cac"
+
+# 保住锁文件的引用：一旦被 GC 关闭，flock 就释放了
+LOCK_HANDLE = None
 
 # ---- 内核隔离常量 ----
 CLONE_NEWUSER = 0x10000000
@@ -87,34 +91,36 @@ def http_json(opener, method, url, body=None, headers=None, timeout=60):
         return 0, str(e)
 
 
-def running_cores():
-    pids = []
-    for name in os.listdir("/proc"):
-        if not name.isdigit():
-            continue
-        try:
-            with open("/proc/" + name + "/cmdline", "rb") as f:
-                cmd = f.read().replace(b"\x00", b" ").decode("utf-8", "replace")
-        except OSError:
-            continue
-        if "/usr/local/lib/cogagent/cogagent" in cmd or "cogagent-core" in cmd:
-            pids.append(int(name))
-    return [p for p in pids if p != os.getpid()]
+def account_lock(root):
+    """按账号加排他锁：返回 (file, ok)。ok=False 表示该账号已有实例。"""
+    os.makedirs(root, mode=0o700, exist_ok=True)
+    path = os.path.join(root, ".instance.lock")
+    handle = open(path, "a+")
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return handle, False
+    os.set_inheritable(handle.fileno(), True)
+    try:
+        os.fchmod(handle.fileno(), 0o600)
+    except OSError:
+        pass
+    return handle, True
 
 
-def single_instance_check():
-    pids = running_cores()
-    if not pids:
-        return
-    print("[cogagent] 已有实例在运行（PID " + ", ".join(str(p) for p in pids) + "）")
-    print("[cogagent] 继续登录可能挤掉旧实例。继续？[y/N] ", end="", flush=True)
+def single_instance_check(root, account):
+    handle, ok = account_lock(root)
+    if ok:
+        return handle
+    print("[cogagent] 账号 " + account + " 已有实例在运行")
+    print("[cogagent] 继续会挤掉它（服务端同一账号只保留一个会话）。继续？[y/N] ", end="", flush=True)
     try:
         answer = sys.stdin.readline().strip().lower()
     except (KeyboardInterrupt, EOFError):
         answer = ""
     if answer not in ("y", "yes"):
         die("已取消", 0)
-
+    return handle
 
 def login(cfg, opener):
     api = cfg["apiBase"].rstrip("/")
@@ -321,13 +327,14 @@ def sandbox(root, command):
 def main():
     cfg = load_cfg()
     opener = make_opener(cfg)
-    single_instance_check()
     token = user_detail(cfg, opener, login(cfg, opener))
     root = os.path.join(cfg["rootBase"].rstrip("/"), token["account"])
     models = fetch_models(cfg, opener, token)
     if not models:
         die("模型清单为空")
     ensure_dirs(root)
+    global LOCK_HANDLE
+    LOCK_HANDLE = single_instance_check(root, token["account"])
     print("[cogagent] 账号 " + token["account"] + "  区域 " + token["area"] + "  模型 " + str(len(models)) + " 个", flush=True)
 
     env = dict(os.environ)
