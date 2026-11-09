@@ -173,7 +173,10 @@ const zh: Record<string, string> = {
   "Go to parent session": "回到父会话",
   "Move to queue": "移入队列",
   "used": "已用",
-  "spent": "已花费"
+  "spent": "已花费",
+  "keep working until an objective is met [pause|resume|clear]": "持续执行直到目标达成 [pause|resume|clear]",
+  "guided AGENTS.md setup": "引导式生成 AGENTS.md",
+  "Manage the session goal": "管理会话目标"
   }
 
 export function t(text: string): string {

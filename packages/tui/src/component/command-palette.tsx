@@ -1,4 +1,5 @@
 import { createMemo } from "solid-js"
+import { t } from "../i18n.js"
 import { DialogSelect, type DialogSelectRef } from "../ui/dialog-select"
 import { type DialogContext } from "../ui/dialog"
 import { COMMAND_PALETTE_COMMAND, Keymap, type KeymapCommand } from "../context/keymap"
@@ -20,7 +21,7 @@ export function CommandPaletteDialog() {
       const footer = shortcuts.all(command.id)
       return {
         title: command.title ?? command.id,
-        description: command.description,
+        description: command.description ? t(command.description) : undefined,
         category: command.group,
         searchText: [command.id, command.description].filter(Boolean).join(" "),
         searchFooter: [command.group, footer].filter(Boolean).join(" · "),
