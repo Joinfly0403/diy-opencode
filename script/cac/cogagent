@@ -255,14 +255,15 @@ def service_port(account):
 
 
 def prepare_service(binary, port, env):
-    """把端口写进该用户自己的 service 配置（XDG_STATE_HOME 已是用户目录）。"""
-    try:
-        subprocess.run(
-            [binary, "service", "set", "port", str(port)],
-            env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30,
-        )
-    except (OSError, subprocess.SubprocessError):
-        pass
+    """停掉陈旧服务、写入本账号端口（XDG_STATE_HOME 已是用户目录）。"""
+    for args, timeout in ((["service", "stop"], 15), (["service", "set", "port", str(port)], 30)):
+        try:
+            subprocess.run(
+                [binary] + args,
+                env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=timeout,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
 
 
 def sandbox(root, command):

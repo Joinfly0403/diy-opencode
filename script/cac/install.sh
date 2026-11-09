@@ -1,78 +1,86 @@
 #!/bin/bash
-# cogagent 安装脚本（P0）：目录、权限、CA 占位、内核保护、/etc 配置、自检脚本
-# 用法：root 身份执行  bash install.sh
+# cogagent 全量安装（root）。用法：
+#   bash install.sh <目录>
+# 目录里需要：cogagent-linux-<arch>（二进制）、cogagent（包装层），可选 cac.json、selfcheck.sh
 set -euo pipefail
 
+[ "$(id -u)" = "0" ] || { echo "必须以 root 运行"; exit 1; }
+SRC="${1:-$(cd "$(dirname "$0")" && pwd)}"
+[ -d "$SRC" ] || { echo "目录不存在: $SRC"; exit 1; }
+
+BIN_SRC=$(ls "$SRC"/cogagent-linux-* 2>/dev/null | head -1 || true)
+[ -n "$BIN_SRC" ] || { echo "缺少二进制 cogagent-linux-*"; exit 1; }
+[ -f "$SRC/cogagent" ] || { echo "缺少包装层 cogagent"; exit 1; }
+
+SVC_USER=ossadm
 ROOT_DIR=/srv/cogagent
 USERS_DIR=$ROOT_DIR/users
 LOGIN_DIR=$ROOT_DIR/login-logs
 TOOLS_DIR=$ROOT_DIR/tools
 AUDIT_DIR=/var/log/cogagent
 ETC=/etc/cogagent
-SVC_USER=ossadm
+LIB=/usr/local/lib/cogagent
+BIN=/usr/local/bin/cogagent
 
-if [ "$(id -u)" != "0" ]; then echo "必须以 root 运行"; exit 1; fi
-if ! id "$SVC_USER" >/dev/null 2>&1; then echo "找不到用户 $SVC_USER"; exit 1; fi
+id "$SVC_USER" >/dev/null 2>&1 || { echo "找不到用户 $SVC_USER"; exit 1; }
 SVC_GROUP=$(id -gn "$SVC_USER")
 
-SRC_DIR=$(cd "$(dirname "$0")" && pwd)
-echo "== 服务用户: $SVC_USER  组: $SVC_GROUP"
-echo "== 源目录: $SRC_DIR"
+echo "== 1/6 停止旧进程"
+pkill -f "$LIB/cogagent" 2>/dev/null || true
+pkill -f "cogagent-core" 2>/dev/null || true
+sleep 1
 
-install -d -m 0755 "$ROOT_DIR"
-install -d -m 0755 "$TOOLS_DIR"
-install -d -m 0755 -o "$SVC_USER" -g "$SVC_GROUP" "$USERS_DIR"
-install -d -m 0755 -o "$SVC_USER" -g "$SVC_GROUP" "$LOGIN_DIR"
+echo "== 2/6 全量替换程序目录（先删后装，不留旧文件）"
+rm -rf "$LIB"
+install -d -m 0755 "$LIB"
+install -m 0755 "$BIN_SRC" "$LIB/cogagent"
+install -m 0755 "$SRC/cogagent" "$BIN"
+
+echo "== 3/6 清理旧的用户状态（陈旧端口注册等）"
+if [ -d "$USERS_DIR" ]; then
+  find "$USERS_DIR" -mindepth 2 -maxdepth 2 -type d -name state -exec sh -c 'rm -rf "$1"/*' _ {} \; 2>/dev/null || true
+fi
+
+echo "== 4/6 目录与权限"
+install -d -m 0755 "$ROOT_DIR" "$TOOLS_DIR"
+install -d -m 0755 -o "$SVC_USER" -g "$SVC_GROUP" "$USERS_DIR" "$LOGIN_DIR"
 install -d -m 0775 -o "$SVC_USER" -g "$SVC_GROUP" "$AUDIT_DIR"
 install -d -m 0755 -o root -g root "$ETC"
-
-# ---------- 内核保护：禁止同 UID 互看内存 ----------
 if [ -w /proc/sys/kernel/yama/ptrace_scope ]; then
   sysctl -w kernel.yama.ptrace_scope=1 >/dev/null
   echo "kernel.yama.ptrace_scope = 1" > /etc/sysctl.d/99-cogagent.conf
-  echo "== ptrace_scope = $(cat /proc/sys/kernel/yama/ptrace_scope)"
-else
-  echo "== 警告：此内核没有 Yama（/proc/sys/kernel/yama 不存在）"
 fi
-
-# ---------- 企业 CA 占位（后续手动替换） ----------
-if [ ! -f "$ETC/cert.pem" ]; then
-  if command -v openssl >/dev/null 2>&1; then
-    openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
-      -keyout /tmp/cogagent-placeholder.key -out "$ETC/cert.pem" \
-      -subj "/CN=PLACEHOLDER-REPLACE-WITH-ENTERPRISE-CA" >/dev/null 2>&1
-    rm -f /tmp/cogagent-placeholder.key
-    chmod 0644 "$ETC/cert.pem"
-    echo "== 已生成占位 CA：$ETC/cert.pem（请替换为企业证书）"
-  else
-    echo "== 警告：没有 openssl，无法生成占位 CA；请手动放置 $ETC/cert.pem"
-  fi
-else
-  echo "== 已存在 CA：$ETC/cert.pem（保留不动）"
+if [ -f "$SRC/cac.json" ]; then
+  install -m 0644 -o root -g root "$SRC/cac.json" "$ETC/cac.json"
 fi
-
-# ---------- /etc 配置 ----------
-if [ -f "$SRC_DIR/cac.json" ]; then
-  install -m 0644 -o root -g root "$SRC_DIR/cac.json" "$ETC/cac.json"
-  if command -v python3 >/dev/null 2>&1; then
-    python3 -m json.tool "$ETC/cac.json" >/dev/null && echo "== 配置 JSON 合法：$ETC/cac.json"
-  fi
-else
-  echo "== 警告：缺少 $SRC_DIR/cac.json，跳过配置安装"
+if [ ! -f "$ETC/cert.pem" ] && command -v openssl >/dev/null 2>&1; then
+  openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
+    -keyout /tmp/cogagent-placeholder.key -out "$ETC/cert.pem" \
+    -subj "/CN=PLACEHOLDER-REPLACE-WITH-ENTERPRISE-CA" >/dev/null 2>&1
+  rm -f /tmp/cogagent-placeholder.key
+  chmod 0644 "$ETC/cert.pem"
 fi
+[ -f "$SRC/selfcheck.sh" ] && install -m 0755 "$SRC/selfcheck.sh" "$TOOLS_DIR/selfcheck.sh"
 
-# ---------- 自检脚本 ----------
-if [ -f "$SRC_DIR/selfcheck.sh" ]; then
-  install -m 0755 -o root -g root "$SRC_DIR/selfcheck.sh" "$TOOLS_DIR/selfcheck.sh"
-  echo "== 自检脚本：$TOOLS_DIR/selfcheck.sh"
-fi
+echo "== 5/6 写入版本指纹"
+BIN_SUM=$(sha256sum "$LIB/cogagent" | cut -d' ' -f1)
+WRAP_SUM=$(sha256sum "$BIN" | cut -d' ' -f1)
+{
+  echo "installed_at=$(date -Is)"
+  echo "binary_sha256=$BIN_SUM"
+  echo "wrapper_sha256=$WRAP_SUM"
+  echo "source=$(basename "$BIN_SRC")"
+} > "$LIB/VERSION"
+cat "$LIB/VERSION"
 
-# ---------- 结果 ----------
+echo "== 6/6 校验（不一致直接失败）"
+[ "$(sha256sum "$LIB/cogagent" | cut -d' ' -f1)" = "$BIN_SUM" ] || { echo "FAIL 二进制校验"; exit 1; }
+[ "$(sha256sum "$BIN" | cut -d' ' -f1)" = "$WRAP_SUM" ] || { echo "FAIL 包装层校验"; exit 1; }
+grep -q "COGAGENT_CAC_TOKEN" "$BIN" || { echo "FAIL 包装层不是新版"; exit 1; }
+grep -q "service_port" "$BIN" || { echo "FAIL 包装层缺少端口分配"; exit 1; }
+"$LIB/cogagent" --version || { echo "FAIL 二进制无法运行"; exit 1; }
 echo ""
-echo "== 目录与权限"
-ls -ld "$ROOT_DIR" "$USERS_DIR" "$LOGIN_DIR" "$TOOLS_DIR" "$AUDIT_DIR" "$ETC" 2>&1
-echo ""
-echo "== 下一步"
-echo "1) 把企业 CA 覆盖到 $ETC/cert.pem"
-echo "2) 以 ossadm 身份运行自检：su - ossadm -c \"bash $TOOLS_DIR/selfcheck.sh\""
-echo "3) 自检全绿后再装 cogagent 本体"
+echo "== 安装完成"
+echo "   二进制: $LIB/cogagent  ($BIN_SUM)"
+echo "   包装层: $BIN           ($WRAP_SUM)"
+echo "   运行:   su - $SVC_USER -c \"cogagent\""
