@@ -1,4 +1,5 @@
 import { existsSync } from "fs"
+import { t } from "./i18n.js"
 import path from "path"
 import { render, useRenderer, useTerminalDimensions } from "@opentui/solid"
 import "./component/spinner-renderable"
@@ -557,7 +558,7 @@ function App() {
       if (status.status === "needs_auth")
         toast.show({
           variant: "warning",
-          title: "MCP server needs authentication",
+          title: t("MCP server needs authentication"),
           message: `Connect "${server.name}" to use its tools.`,
           action: { label: "Open MCP servers", run: () => keymap.dispatch("mcp.list") },
         })
@@ -742,7 +743,7 @@ function App() {
     [
       {
         name: COMMAND_PALETTE_COMMAND,
-        title: "Show command palette",
+        title: t("Show command palette"),
         category: "System",
         palette: undefined,
         run: () => {
@@ -751,7 +752,7 @@ function App() {
       },
       {
         name: "session.list",
-        title: "Switch session",
+        title: t("Switch session"),
         category: "Session",
         suggested: data.session.list().length > 0,
         slash: { name: "sessions", aliases: ["resume", "continue"] },
@@ -761,7 +762,7 @@ function App() {
       },
       {
         name: "session.new",
-        title: "New session",
+        title: t("New session"),
         suggested: route.data.type === "session",
         category: "Session",
         slash: { name: "new" },
@@ -788,7 +789,7 @@ function App() {
       },
       {
         name: "session.clear",
-        title: "Clear session",
+        title: t("Clear session"),
         category: "Session",
         slash: { name: "clear" },
         run: () => {
@@ -815,7 +816,7 @@ function App() {
       },
       {
         name: "open.menu",
-        title: "Open session or project",
+        title: t("Open session or project"),
         category: "Session",
         slash: { name: "open", aliases: ["projects", "project"] },
         run: () => {
@@ -836,7 +837,7 @@ function App() {
       })),
       {
         name: "session.tab.next",
-        title: "Next tab",
+        title: t("Next tab"),
         category: "Session",
         palette: undefined,
         enabled: sessionTabs.enabled,
@@ -844,7 +845,7 @@ function App() {
       },
       {
         name: "session.tab.previous",
-        title: "Previous tab",
+        title: t("Previous tab"),
         category: "Session",
         palette: undefined,
         enabled: sessionTabs.enabled,
@@ -852,7 +853,7 @@ function App() {
       },
       {
         name: "session.tab.next_unread",
-        title: "Next unread tab",
+        title: t("Next unread tab"),
         category: "Session",
         palette: undefined,
         enabled: sessionTabs.enabled,
@@ -860,7 +861,7 @@ function App() {
       },
       {
         name: "session.tab.previous_unread",
-        title: "Previous unread tab",
+        title: t("Previous unread tab"),
         category: "Session",
         palette: undefined,
         enabled: sessionTabs.enabled,
@@ -868,14 +869,14 @@ function App() {
       },
       {
         name: "session.tab.close",
-        title: "Close tab",
+        title: t("Close tab"),
         category: "Session",
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.close(),
       },
       {
         name: "session.tab.reopen",
-        title: "Reopen closed tab",
+        title: t("Reopen closed tab"),
         category: "Session",
         enabled: sessionTabs.enabled,
         run: () => sessionTabs.reopen(),
@@ -890,7 +891,7 @@ function App() {
       })),
       {
         name: "model.list",
-        title: "Switch model",
+        title: t("Switch model"),
         suggested: true,
         category: "Agent",
         slash: { name: "models" },
@@ -900,7 +901,7 @@ function App() {
       },
       {
         name: "model.cycle_recent",
-        title: "Model cycle",
+        title: t("Model cycle"),
         category: "Agent",
         palette: undefined,
         run: () => {
@@ -909,7 +910,7 @@ function App() {
       },
       {
         name: "model.cycle_recent_reverse",
-        title: "Model cycle reverse",
+        title: t("Model cycle reverse"),
         category: "Agent",
         palette: undefined,
         run: () => {
@@ -918,7 +919,7 @@ function App() {
       },
       {
         name: "model.cycle_favorite",
-        title: "Favorite cycle",
+        title: t("Favorite cycle"),
         category: "Agent",
         palette: undefined,
         run: () => {
@@ -927,7 +928,7 @@ function App() {
       },
       {
         name: "model.cycle_favorite_reverse",
-        title: "Favorite cycle reverse",
+        title: t("Favorite cycle reverse"),
         category: "Agent",
         palette: undefined,
         run: () => {
@@ -936,7 +937,7 @@ function App() {
       },
       {
         name: "agent.list",
-        title: "Switch agent",
+        title: t("Switch agent"),
         category: "Agent",
         slash: { name: "agents" },
         run: () => {
@@ -945,7 +946,7 @@ function App() {
       },
       {
         name: "usage.show",
-        title: "View usage",
+        title: t("View usage"),
         category: "Agent",
         slash: { name: "usage" },
         run: () => {
@@ -954,7 +955,7 @@ function App() {
       },
       {
         name: "mcp.list",
-        title: "MCP servers",
+        title: t("MCP servers"),
         category: "Agent",
         slash: { name: "mcps" },
         run: () => {
@@ -963,7 +964,7 @@ function App() {
       },
       {
         name: "agent.cycle",
-        title: "Agent cycle",
+        title: t("Agent cycle"),
         category: "Agent",
         palette: undefined,
         run: () => {
@@ -972,7 +973,7 @@ function App() {
       },
       {
         name: "variant.cycle",
-        title: "Variant cycle",
+        title: t("Variant cycle"),
         category: "Agent",
         run: () => {
           local.model.variant.cycle()
@@ -980,14 +981,14 @@ function App() {
       },
       {
         name: "variant.list",
-        title: "Switch model variant",
+        title: t("Switch model variant"),
         category: "Agent",
         palette: local.model.variant.list().length === 0 ? undefined : (true as const),
         slash: { name: "variants", aliases: ["thinking", "effort"] },
         run: () => {
           if (local.model.variant.list().length === 0) {
             return toast.show({
-              title: "No variants available",
+              title: t("No variants available"),
               message: "The current model does not support any variants.",
               variant: "info",
             })
@@ -997,7 +998,7 @@ function App() {
       },
       {
         name: "agent.cycle.reverse",
-        title: "Agent cycle reverse",
+        title: t("Agent cycle reverse"),
         category: "Agent",
         palette: undefined,
         run: () => {
@@ -1006,7 +1007,7 @@ function App() {
       },
       {
         name: "provider.connect",
-        title: "Connect an integration",
+        title: t("Connect an integration"),
         suggested: !connected(),
         slash: { name: "connect" },
         run: () => {
@@ -1022,7 +1023,7 @@ function App() {
         ? [
             {
               name: "opencode.highlights",
-              title: "Show release highlights",
+              title: t("Show release highlights"),
               slash: { name: "highlights" },
               run: () => dialog.replace(() => <DialogHighlights version={app.version} items={app.highlights ?? []} />),
               category: "System",
@@ -1031,7 +1032,7 @@ function App() {
         : []),
       {
         name: "opencode.settings",
-        title: "Open settings",
+        title: t("Open settings"),
         suggested: true,
         slash: { name: "settings" },
         run: () => {
@@ -1041,7 +1042,7 @@ function App() {
       },
       {
         name: "opencode.status",
-        title: "View status",
+        title: t("View status"),
         slash: { name: "status" },
         run: () => {
           dialog.replace(() => <DialogStatus />)
@@ -1050,7 +1051,7 @@ function App() {
       },
       {
         name: "server.pair",
-        title: "Pair device",
+        title: t("Pair device"),
         slash: { name: "pair", aliases: ["web"] },
         run: () => {
           dialog.replace(() => <DialogPair />)
@@ -1061,7 +1062,7 @@ function App() {
         ? [
             {
               name: "service.restart",
-              title: "Restart service",
+              title: t("Restart service"),
               slash: { name: "restart" },
               run: async () => {
                 const restart = client.restart
@@ -1080,7 +1081,7 @@ function App() {
         : []),
       {
         name: "location.reload",
-        title: "Reload configuration",
+        title: t("Reload configuration"),
         slash: { name: "reload" },
         run: async () => {
           dialog.clear()
@@ -1096,7 +1097,7 @@ function App() {
       },
       {
         name: "opencode.debug",
-        title: "View debug info",
+        title: t("View debug info"),
         slash: { name: "debug" },
         run: () => {
           dialog.replace(() => <DialogDebug />)
@@ -1105,7 +1106,7 @@ function App() {
       },
       {
         name: "theme.switch",
-        title: "Switch theme",
+        title: t("Switch theme"),
         slash: { name: "themes" },
         run: () => {
           dialog.replace(() => <DialogThemeList />)
@@ -1136,7 +1137,7 @@ function App() {
       },
       {
         name: "help.show",
-        title: "Help",
+        title: t("Help"),
         slash: { name: "help" },
         run: () => {
           dialog.replace(() => <DialogHelp />)
@@ -1145,7 +1146,7 @@ function App() {
       },
       {
         name: "docs.open",
-        title: "Open docs",
+        title: t("Open docs"),
         run: () => {
           openUrl("https://opencode.ai/docs").catch(() => {})
           dialog.clear()
@@ -1154,14 +1155,14 @@ function App() {
       },
       {
         name: "app.exit",
-        title: "Exit the app",
+        title: t("Exit the app"),
         slash: { name: "exit", aliases: ["quit", "q"] },
         run: () => exit(),
         category: "System",
       },
       {
         name: "app.debug",
-        title: "Toggle debug panel",
+        title: t("Toggle debug panel"),
         category: "System",
         palette: undefined,
         run: () => {
@@ -1171,7 +1172,7 @@ function App() {
       },
       {
         name: "app.console",
-        title: "Toggle console",
+        title: t("Toggle console"),
         category: "System",
         run: () => {
           renderer.console.toggle()
@@ -1180,7 +1181,7 @@ function App() {
       },
       {
         name: "terminal.suspend",
-        title: "Suspend terminal",
+        title: t("Suspend terminal"),
         category: "System",
         palette: undefined,
         enabled: process.platform !== "win32",
