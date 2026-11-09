@@ -1,5 +1,21 @@
 # 部署 / 升级 / 测试
 
+## 0. 约定：所有上传包放 `/root/deploy/`
+
+服务器上的安装包、升级包、离线发布物一律放在 **`/root/deploy/`**，不要散落在 `/root`、`/tmp`、`/home`。
+
+    /root/deploy/
+      cogagent-install-arm64.run      ← 自解压安装包（含程序、配置、证书占位、脚本）
+      （升级包也放这里，文件名带版本号）
+
+安装：
+
+    bash /root/deploy/cogagent-install-arm64.run          # 会先确认
+    bash /root/deploy/cogagent-install-arm64.run --yes    # 跳过确认
+    bash /root/deploy/cogagent-install-arm64.run /root/deploy/unpacked   # 只解压
+
+安装包自身不改动 `/root/deploy/` 的内容，解压与安装都在临时目录里完成。
+
 > 二进制不走 git（单文件 175MB，超过 GitHub 100MB 限制），用 Release 附件分发。
 
 ## 1. 装二进制
