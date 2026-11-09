@@ -6,15 +6,17 @@ import ctypes
 import json
 import os
 import ssl
+import subprocess
 import sys
 import time
+import zlib
 import urllib.error
 import urllib.request
 import uuid
 from urllib.parse import quote
 
 CFG_PATH = os.environ.get("COGAGENT_CAC_CONFIG", "/etc/cogagent/cac.json")
-CORE_CMD = os.environ.get("COGAGENT_CMD", "exec /usr/local/lib/cogagent/cogagent --standalone")
+CORE_CMD = os.environ.get("COGAGENT_CMD", "exec /usr/local/lib/cogagent/cogagent")
 PROVIDER_ID = "cac"
 
 # ---- 内核隔离常量 ----
@@ -247,6 +249,22 @@ def ensure_dirs(root):
     os.chmod(root, 0o700)
 
 
+def service_port(account):
+    """同一台机器多用户共用一个网络栈，服务端口必须按账号错开。"""
+    return 41000 + (zlib.crc32(account.encode("utf-8")) % 20000)
+
+
+def prepare_service(binary, port, env):
+    """把端口写进该用户自己的 service 配置（XDG_STATE_HOME 已是用户目录）。"""
+    try:
+        subprocess.run(
+            [binary, "service", "set", "port", str(port)],
+            env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
 def sandbox(root, command):
     """进入 user+mount 命名空间，遮蔽其他账号目录，掉能力后执行命令（替代独立 sandbox.sh）。"""
     base = os.path.dirname(root)
@@ -322,6 +340,11 @@ def main():
     env["XDG_CACHE_HOME"] = os.path.join(root, "cache")
     env["COGAGENT_ROOT"] = root
     env["COGAGENT_CMD"] = CORE_CMD + (" " + " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "")
+
+    binary = CORE_CMD.split()[1] if CORE_CMD.startswith("exec ") else CORE_CMD.split()[0]
+    port = service_port(token["account"])
+    prepare_service(binary, port, env)
+    env["OPENCODE_SERVICE_PORT"] = str(port)
 
     os.environ.update(env)
     sandbox(root, env["COGAGENT_CMD"])

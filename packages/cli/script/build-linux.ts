@@ -11,6 +11,7 @@
  *   bun install --os="*" --cpu="*" --libc="*"
  */
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
+import { createHash } from "node:crypto"
 import { discoverPluginRuntimeSpecifiers, pluginRuntimeLoaderCode } from "@opencode/plugin/runtime-modules"
 import type { BunPlugin } from "bun"
 import path from "node:path"
@@ -53,11 +54,39 @@ const pluginRuntimePlugin: BunPlugin = {
   },
 }
 
+// 编译后的服务子进程会在运行时解析 @opencode/pty-<platform>，而 $bunfs 里没有 node_modules，
+// 所以把目标平台的 pty 二进制在构建期嵌进去（找不到就退化成 stub）。
+const ptyTarget = target.replace("bun-", "").split("-")
+const ptySpec = "@opencode/pty-" + ptyTarget[0] + "-" + ptyTarget[1] + "-" + (ptyTarget[2] === "musl" ? "musl" : "gnu")
+const ptyPlugin: BunPlugin = {
+  name: "pty-binary",
+  setup(build) {
+    build.onLoad({ filter: /persistent-pty[/\\]pty-binding\.ts$/ }, async () => {
+      try {
+        const pkgFile = Bun.resolveSync(ptySpec + "/package.json", dir)
+        const pkg = await Bun.file(pkgFile).json()
+        const bin = path.join(path.dirname(pkgFile), "bin", "opencode-pty")
+        const bytes = new Uint8Array(await Bun.file(bin).arrayBuffer())
+        const sha256 = createHash("sha256").update(bytes).digest("hex")
+        return {
+          loader: "js",
+          contents:
+            "import file from " + JSON.stringify(bin.replaceAll("\\", "/")) +
+            ' with { type: "file" }\nexport default { path: file, version: ' +
+            JSON.stringify(pkg.version) + ", sha256: " + JSON.stringify(sha256) + " }",
+        }
+      } catch {
+        return { loader: "js", contents: "export default undefined" }
+      }
+    })
+  },
+}
+
 const result = await Bun.build({
   entrypoints: [path.join(dir, "src/index.ts")],
   target: "bun",
   compile: { target, outfile },
-  plugins: [createSolidTransformPlugin(), wsReexportPlugin, pluginRuntimePlugin],
+  plugins: [createSolidTransformPlugin(), wsReexportPlugin, pluginRuntimePlugin, ptyPlugin],
   define: {
     "process.env.OPENCODE_CLI_NAME": JSON.stringify("cogagent"),
   },
