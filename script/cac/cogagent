@@ -14,7 +14,7 @@ from urllib.parse import quote
 
 CFG_PATH = os.environ.get("COGAGENT_CAC_CONFIG", "/etc/cogagent/cac.json")
 SANDBOX = os.environ.get("COGAGENT_SANDBOX", "/usr/local/lib/cogagent/sandbox.sh")
-CORE_CMD = os.environ.get("COGAGENT_CMD", "exec /usr/local/lib/cogagent/cogagent")
+CORE_CMD = os.environ.get("COGAGENT_CMD", "exec /usr/local/lib/cogagent/cogagent --standalone")
 PROVIDER_ID = "cac"
 
 
