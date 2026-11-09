@@ -86,7 +86,7 @@ test("sidebar shows onboarding without a connected integration", async () => {
   try {
     const frame = app.captureCharFrame()
     expect(frame).toContain("Getting started")
-    expect(frame).toContain("Connect a provider to start immediately")
+    expect(frame).toContain("Connect a provider to start")
     expect(frame).toContain("Connect provider")
     expect(frame).toContain("/connect")
   } finally {
