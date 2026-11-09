@@ -10,6 +10,12 @@
 - 运行时目录与配置文件已改名为 `cogagent`（`~/.local/share/cogagent`、`cogagent.db`、`cogagent.json(c)`）
 - `@opencode/*` 包名保持不动（内部 import，用户不可见）
 
+## 回复语言
+
+- **默认用中文回复**：讨论、方案、说明、结论、报错解释一律中文，不主动切英文。
+- 只有用户明确要求英文、或内容本身必须用英文时才用英文（例如提交信息、代码注释按仓库既有风格）。
+- 代码、命令、路径、配置键、日志、错误码、模型名、技术名词（token、provider、worktree 等）保持原样，不翻译。
+
 ## 仓库约定
 
 - After changing the public Protocol or Server `HttpApi`, run `bun run generate` from `packages/client`. Do not edit generated client files directly.
