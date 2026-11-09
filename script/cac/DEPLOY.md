@@ -10,9 +10,9 @@
 
 ## 2. 装脚本
 
-    install -m 0755 script/cac/cogagent   /usr/local/bin/cogagent
-    install -m 0755 script/cac/sandbox.sh /usr/local/lib/cogagent/sandbox.sh
+    install -m 0755 script/cac/cogagent /usr/local/bin/cogagent
     rm -f /usr/local/lib/cogagent/cogagent-core    # 清掉早期探针
+    # 沙箱已内建在包装层里，不再需要 sandbox.sh
 
 ## 3. 环境（首次）
 

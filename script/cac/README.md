@@ -8,7 +8,7 @@
 | 文件 | 作用 |
 |---|---|
 | `cogagent` | 包装层：单实例软检查 → 浏览器授权 → 建目录 → 进沙箱 → 注入 provider 配置 → 启动 TUI |
-| `sandbox.sh` | 沙箱：盖掉用户根、bind 回自己、掉能力、校验条目数（fail-closed） |
+| （沙箱） | 已**内建在包装层**：包装层自己 unshare + mount + 掉能力，不再需要独立脚本 |
 | `mock-server.py` | 本地 mock CAC 服务，用于无内网环境下验证链路 |
 
 ## 已在本机（WSL）验证
