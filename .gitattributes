@@ -9,3 +9,6 @@ packages/client/src/effect/api/** linguist-generated
 packages/core/src/**/*.txt text eol=lf
 packages/httpapi-codegen/test/generated/*.ts text eol=lf
 # The site tests compare source text and humans.txt byte for byte, so Windows checkouts keep LF.
+
+# 部署脚本必须是 LF，否则 shebang 会带上 \r 导致 /usr/bin/env 找不到解释器
+script/cac/* text eol=lf
