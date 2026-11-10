@@ -366,7 +366,13 @@ def main():
     prepare_service(binary, port, env)
     env["OPENCODE_SERVICE_PORT"] = str(port)
 
+    # 终端能力兜底：部分主机把 TERM 设成 dumb/vt100，分屏重绘会失效
+    env.setdefault("TERM", "xterm-256color")
     os.environ.update(env)
+    # 排障开关：COGAGENT_NO_SANDBOX=1 时跳过命名空间沙箱，直接执行（仅用于定位问题）
+    if os.environ.get("COGAGENT_NO_SANDBOX") == "1":
+        print("[cogagent] 已跳过沙箱（COGAGENT_NO_SANDBOX=1）")
+        os.execvp("bash", ["bash", "-c", env["COGAGENT_CMD"]])
     sandbox(root, env["COGAGENT_CMD"])
 
 
