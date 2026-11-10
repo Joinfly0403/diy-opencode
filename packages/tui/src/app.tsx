@@ -635,7 +635,6 @@ function App() {
       })
       const winsize = new Uint16Array(4)
       ioctl = (fd, request, arg) => libc.symbols.ioctl(fd, request, arg)
-      try { require("node:fs").appendFileSync("/tmp/cogagent-resize.log", Date.now() + " ffi-ok\n") } catch {}
       return () => {
         try {
           if (!ioctl) return
@@ -648,32 +647,13 @@ function App() {
           renderer.resize(columns, rows)
           ;(current as { forceFullRepaintRequested?: boolean }).forceFullRepaintRequested = true
           renderer.requestRender()
-          try {
-            require("node:fs").appendFileSync("/tmp/cogagent-resize.log", Date.now() + " ioctl " + columns + "x" + rows + "\n")
-          } catch {}
         } catch {}
       }
-    } catch (error) {
-      try { require("node:fs").appendFileSync("/tmp/cogagent-resize.log", Date.now() + " ffi-fail " + String(error) + "\n") } catch {}
+    } catch {
       return () => {}
     }
   })()
   setInterval(terminalSizePoll, 500)
-
-  // 诊断：记录尺寸变化与心跳，定位 aarch64 上 resize 不重绘的问题
-  const resizeLog = (line: string) => {
-    try {
-      require("node:fs").appendFileSync("/tmp/cogagent-resize.log", Date.now() + " " + line + "\n")
-    } catch {}
-  }
-  createEffect(() => {
-    const size = dimensions()
-    resizeLog("dimensions " + size.width + "x" + size.height)
-  })
-  setInterval(() => {
-    const size = dimensions()
-    resizeLog("heartbeat " + size.width + "x" + size.height)
-  }, 5000)
 
   // 终端重排/恢复后强制整帧重绘：某些终端（MobaXterm 最小化再恢复）会重建成空白表面，
   // 差异渲染认为屏幕没变就不再输出，于是整屏黑掉。尺寸变化时请求一次全量重绘。
