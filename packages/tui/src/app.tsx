@@ -624,19 +624,40 @@ function App() {
 
   // aarch64 的终端在部分主机上不会把尺寸变化送进原生渲染层（日志证实 dimensions 不再更新），
   // 这里自己轮询终端尺寸，变化时直接调用 renderer.resize，绕过失效的通知路径。
-  const terminalSizePoll = () => {
+  const terminalSizePoll = (() => {
+    if (process.platform !== "linux") return () => {}
+    // Bun 在该主机上连 process.stdout.rows/columns 都不更新，直接用 ioctl(TIOCGWINSZ) 问内核
+    let ioctl: ((fd: number, request: number, arg: unknown) => number) | undefined
     try {
-      const type = (renderer as unknown as { forceFullRepaintRequested?: boolean })
-      const rows = process.stdout.rows
-      const columns = process.stdout.columns
-      if (!rows || !columns) return
-      const current = renderer as unknown as { width?: number; height?: number }
-      if (current.width === columns && current.height === rows) return
-      renderer.resize(columns, rows)
-      type.forceFullRepaintRequested = true
-      renderer.requestRender()
-    } catch {}
-  }
+      const { dlopen, FFIType, ptr } = require("bun:ffi")
+      const libc = dlopen("libc.so.6", {
+        ioctl: { args: [FFIType.i32, FFIType.u64, FFIType.ptr], returns: FFIType.i32 },
+      })
+      const winsize = new Uint16Array(4)
+      ioctl = (fd, request, arg) => libc.symbols.ioctl(fd, request, arg)
+      try { require("node:fs").appendFileSync("/tmp/cogagent-resize.log", Date.now() + " ffi-ok\n") } catch {}
+      return () => {
+        try {
+          if (!ioctl) return
+          if (ioctl(1, 0x5413, ptr(winsize)) !== 0) return
+          const rows = winsize[0]
+          const columns = winsize[1]
+          if (!rows || !columns) return
+          const current = renderer as unknown as { width?: number; height?: number }
+          if (current.width === columns && current.height === rows) return
+          renderer.resize(columns, rows)
+          ;(current as { forceFullRepaintRequested?: boolean }).forceFullRepaintRequested = true
+          renderer.requestRender()
+          try {
+            require("node:fs").appendFileSync("/tmp/cogagent-resize.log", Date.now() + " ioctl " + columns + "x" + rows + "\n")
+          } catch {}
+        } catch {}
+      }
+    } catch (error) {
+      try { require("node:fs").appendFileSync("/tmp/cogagent-resize.log", Date.now() + " ffi-fail " + String(error) + "\n") } catch {}
+      return () => {}
+    }
+  })()
   setInterval(terminalSizePoll, 500)
 
   // 诊断：记录尺寸变化与心跳，定位 aarch64 上 resize 不重绘的问题
