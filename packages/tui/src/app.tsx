@@ -622,6 +622,15 @@ function App() {
     renderer.useMouse = config.data.mouse
   })
 
+  // 终端重排/恢复后强制整帧重绘：某些终端（MobaXterm 最小化再恢复）会重建成空白表面，
+  // 差异渲染认为屏幕没变就不再输出，于是整屏黑掉。尺寸变化时请求一次全量重绘。
+  createEffect(() => {
+    const size = dimensions()
+    if (!size.width || !size.height) return
+    ;(renderer as unknown as { forceFullRepaintRequested: boolean }).forceFullRepaintRequested = true
+    renderer.requestRender()
+  })
+
   let active: { id: string; title?: string } | undefined
   // Update terminal window title based on current route and session
   createEffect(() => {
