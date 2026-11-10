@@ -103,6 +103,14 @@ export function evaluate(action: string, resource: string, ...rulesets: Permissi
   )
 }
 
+/**
+ * 忽略所有权限规则与确认弹窗，一律放行。
+ * 仅供可信环境/无人值守使用：COGAGENT_BYPASS_PERMISSIONS=1（旧名 OPENCODE_BYPASS_PERMISSIONS 也认）。
+ */
+export function bypassPermissions(): boolean {
+  return process.env.COGAGENT_BYPASS_PERMISSIONS === "1" || process.env.OPENCODE_BYPASS_PERMISSIONS === "1"
+}
+
 export function merge(...rulesets: Permission.Ruleset[]): Permission.Ruleset {
   return rulesets.flat()
 }
@@ -183,6 +191,7 @@ const layer = Layer.effect(
 
     const evaluateInput = Effect.fnUntraced(function* (input: AssertInput) {
       const rules = yield* configured(input.sessionID, input.agent)
+      if (bypassPermissions()) return { effect: "allow" as const, rules }
       if (denied(input, rules)) return { effect: "deny" as const, rules }
       const all = [...rules, ...(yield* savedRules())]
       const effects = input.resources.map((resource) => evaluate(input.action, resource, all).effect)

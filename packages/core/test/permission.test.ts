@@ -98,6 +98,25 @@ function waitForRequest(input: Partial<Permission.AssertInput> = {}) {
 }
 
 describe("Permission", () => {
+  it.effect("bypasses every rule and prompt when COGAGENT_BYPASS_PERMISSIONS=1", () =>
+    Effect.gen(function* () {
+      yield* setup([{ action: "read", resource: "*", effect: "deny" }])
+      const service = yield* Permission.Service
+      process.env.COGAGENT_BYPASS_PERMISSIONS = "1"
+      try {
+        // deny 规则也不再阻止
+        expect(yield* service.ask(assertion())).toEqual({ id: Permission.ID.create("per_test"), effect: "allow" })
+        // 从未产生待确认请求
+        expect(yield* service.list()).toEqual([])
+        yield* service.assert(assertion())
+      } finally {
+        delete process.env.COGAGENT_BYPASS_PERMISSIONS
+      }
+      // 关掉开关后恢复原有语义
+      expect(yield* service.ask(assertion())).toEqual({ id: Permission.ID.create("per_test"), effect: "deny" })
+    }),
+  )
+
   it.effect("returns the evaluated effect and only queues prompts", () =>
     Effect.gen(function* () {
       yield* setup([{ action: "read", resource: "*", effect: "allow" }])
