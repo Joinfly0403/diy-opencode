@@ -112,9 +112,6 @@ def single_instance_check(root, account):
     handle, ok = account_lock(root)
     if ok:
         return handle
-    if os.environ.get("COGAGENT_ASSUME_YES") == "1":
-        print("[cogagent] 账号 " + account + " 已有实例在运行（已按 COGAGENT_ASSUME_YES=1 继续）")
-        return handle
     print("[cogagent] 账号 " + account + " 已有实例在运行")
     print("[cogagent] 继续会挤掉它（服务端同一账号只保留一个会话）。继续？[y/N] ", end="", flush=True)
     try:
