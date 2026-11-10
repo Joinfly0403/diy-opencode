@@ -622,6 +622,38 @@ function App() {
     renderer.useMouse = config.data.mouse
   })
 
+  // aarch64 的终端在部分主机上不会把尺寸变化送进原生渲染层（日志证实 dimensions 不再更新），
+  // 这里自己轮询终端尺寸，变化时直接调用 renderer.resize，绕过失效的通知路径。
+  const terminalSizePoll = () => {
+    try {
+      const type = (renderer as unknown as { forceFullRepaintRequested?: boolean })
+      const rows = process.stdout.rows
+      const columns = process.stdout.columns
+      if (!rows || !columns) return
+      const current = renderer as unknown as { width?: number; height?: number }
+      if (current.width === columns && current.height === rows) return
+      renderer.resize(columns, rows)
+      type.forceFullRepaintRequested = true
+      renderer.requestRender()
+    } catch {}
+  }
+  setInterval(terminalSizePoll, 500)
+
+  // 诊断：记录尺寸变化与心跳，定位 aarch64 上 resize 不重绘的问题
+  const resizeLog = (line: string) => {
+    try {
+      require("node:fs").appendFileSync("/tmp/cogagent-resize.log", Date.now() + " " + line + "\n")
+    } catch {}
+  }
+  createEffect(() => {
+    const size = dimensions()
+    resizeLog("dimensions " + size.width + "x" + size.height)
+  })
+  setInterval(() => {
+    const size = dimensions()
+    resizeLog("heartbeat " + size.width + "x" + size.height)
+  }, 5000)
+
   // 终端重排/恢复后强制整帧重绘：某些终端（MobaXterm 最小化再恢复）会重建成空白表面，
   // 差异渲染认为屏幕没变就不再输出，于是整屏黑掉。尺寸变化时请求一次全量重绘。
   createEffect(() => {
