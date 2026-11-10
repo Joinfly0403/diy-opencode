@@ -11,7 +11,16 @@ BIN_SRC=$(ls "$SRC"/cogagent-linux-* 2>/dev/null | head -1 || true)
 [ -f "$SRC/cogagent" ] || { echo "安装包缺少包装层"; exit 1; }
 [ -f "$SRC/cac.json" ] || { echo "安装包缺少 cac.json"; exit 1; }
 
+# 优先用 ossadm（公司标准账号）；没有该账号时退回 root，便于在普通服务器上部署
 SVC_USER=ossadm
+if ! id "$SVC_USER" >/dev/null 2>&1; then
+  if id root >/dev/null 2>&1; then
+    SVC_USER=root
+    echo "提示：系统中没有 ossadm 用户，改用 root 部署"
+  else
+    echo "找不到用户 ossadm，且没有 root"; exit 1
+  fi
+fi
 ROOT_DIR=/srv/cogagent
 USERS_DIR=$ROOT_DIR/users
 LOGIN_DIR=$ROOT_DIR/login-logs
@@ -22,7 +31,6 @@ LIB=/usr/local/lib/cogagent
 BIN=/usr/local/bin/cogagent
 SYSCTL_FILE=/etc/sysctl.d/99-cogagent.conf
 
-id "$SVC_USER" >/dev/null 2>&1 || { echo "找不到用户 $SVC_USER"; exit 1; }
 SVC_GROUP=$(id -gn "$SVC_USER")
 HOME_DIR=$(getent passwd "$SVC_USER" | cut -d: -f6)
 
@@ -105,4 +113,8 @@ echo "   包装层: $BIN           ($WRAP_SUM)"
 echo "   配置:   $ETC/cac.json  ($CFG_SUM)"
 echo "   证书:   $ETC/cert.pem（空占位，请手动替换为企业 CA）"
 echo ""
-echo "   下一步：把企业 CA 覆盖到 $ETC/cert.pem 后运行 su - $SVC_USER -c \"cogagent\""
+if [ "$SVC_USER" = "root" ]; then
+  echo "   下一步：把企业 CA 覆盖到 $ETC/cert.pem 后运行 cogagent"
+else
+  echo "   下一步：把企业 CA 覆盖到 $ETC/cert.pem 后运行 su - $SVC_USER -c \"cogagent\""
+fi
