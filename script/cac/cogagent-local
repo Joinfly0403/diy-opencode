@@ -1,4 +1,7 @@
 #!/bin/bash
+# 产品默认中文；需要英文时 COGAGENT_LANG=en cogagent-local
+: "${COGAGENT_LANG:=zh_CN}"
+export COGAGENT_LANG
 # 本地模式：不登录、不用华为域账号，直接用第三方 API（自己的 key）。
 # 数据全部放在当前 OS 用户的 ~/.cogagent 下，按 OS 账号天然隔离。
 set -euo pipefail

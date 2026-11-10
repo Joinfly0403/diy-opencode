@@ -325,6 +325,8 @@ def sandbox(root, command):
 
 
 def main():
+    # 产品默认中文：服务器上 su - 常把 LANG 重置成 C/en_US，这里兜底
+    os.environ.setdefault("COGAGENT_LANG", "zh_CN")
     cfg = load_cfg()
     opener = make_opener(cfg)
     token = user_detail(cfg, opener, login(cfg, opener))
