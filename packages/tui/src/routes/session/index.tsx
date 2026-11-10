@@ -928,6 +928,17 @@ export function Session(props: {
 
   const globalCommands = [
     {
+      id: "app.clear",
+      title: t("Clear screen"),
+      group: "System",
+      palette: undefined,
+      // 收尾手段：整帧重绘。用于终端重建表面后（最小化/恢复、切换窗口）黑屏时手动恢复。
+      run: () => {
+        ;(renderer as unknown as { forceFullRepaintRequested: boolean }).forceFullRepaintRequested = true
+        renderer.requestRender()
+      },
+    },
+    {
       id: "session.page.up",
       title: t("Page up"),
       group: "Session",
