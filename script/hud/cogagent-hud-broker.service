@@ -1,0 +1,16 @@
+[Unit]
+Description=cogagent HUD broker
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/cloud/manager/tools/cogagent-hud/broker.py --port 18765 --root /srv/cogagent/users --state-dir /var/lib/cogagent-hud
+Restart=on-failure
+RestartSec=3
+User=root
+Group=root
+StandardOutput=append:/var/log/cogagent-hud/broker.log
+StandardError=append:/var/log/cogagent-hud/broker.log
+
+[Install]
+WantedBy=multi-user.target

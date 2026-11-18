@@ -12,3 +12,8 @@ packages/httpapi-codegen/test/generated/*.ts text eol=lf
 
 # 部署脚本必须是 LF，否则 shebang 会带上 \r 导致 /usr/bin/env 找不到解释器
 script/cac/* text eol=lf
+
+# HUD 部署脚本（Linux 执行，必须 LF）
+script/hud/*.sh text eol=lf
+script/hud/*.py text eol=lf
+script/hud/*.service text eol=lf

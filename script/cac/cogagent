@@ -311,7 +311,13 @@ def sandbox(root, command):
     if entries != 1:
         die("沙箱校验失败: " + str(entries) + " 个条目可见（应为 1）")
 
-    os.chdir(os.path.join(root, "share", "workspace"))
+    # workspace 可能属于该账号以前用过的身份（如 ossadm），在 userns 里无法进入；退回 tmp 下自建目录
+    try:
+        os.chdir(os.path.join(root, "share", "workspace"))
+    except OSError:
+        fallback = os.path.join(root, "tmp", "workspace")
+        os.makedirs(fallback, exist_ok=True)
+        os.chdir(fallback)
     os.execvp("setpriv", [
         "setpriv",
         "--bounding-set=-all",
@@ -368,10 +374,19 @@ def main():
 
     # 终端能力兜底：部分主机把 TERM 设成 dumb/vt100，分屏重绘会失效
     env.setdefault("TERM", "xterm-256color")
+
+    # M1：只起服务（无人值守），供 HUD broker 使用。
+    # 复用同一条登录 + 抢锁 + 沙箱路径，只把最终执行目标换成 serve。
+    if os.environ.get("COGAGENT_SERVE_ONLY") == "1":
+        print("COGAGENT_LOGIN_ACCOUNT=" + token["account"], flush=True)
+        env["COGAGENT_CMD"] = CORE_CMD + " serve --service --port " + str(port)
     os.environ.update(env)
     # 排障开关：COGAGENT_NO_SANDBOX=1 时跳过命名空间沙箱，直接执行（仅用于定位问题）
     if os.environ.get("COGAGENT_NO_SANDBOX") == "1":
         print("[cogagent] 已跳过沙箱（COGAGENT_NO_SANDBOX=1）")
+        os.execvp("bash", ["bash", "-c", env["COGAGENT_CMD"]])
+    if os.environ.get("COGAGENT_SERVE_ONLY") == "1":
+        # 服务模式：直接执行，不进 userns 沙箱（后台服务不需要交互式遮蔽）
         os.execvp("bash", ["bash", "-c", env["COGAGENT_CMD"]])
     sandbox(root, env["COGAGENT_CMD"])
 
