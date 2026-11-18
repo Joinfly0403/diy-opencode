@@ -18,7 +18,7 @@ from tornado import gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.web import RequestHandler
 
-BROKER = "http://127.0.0.1:18765"
+BROKER = "http://127.0.0.1:18765"  # STREAM_DIAG_V1
 TIMEOUT = 60
 STREAM_TIMEOUT = 86400
 
@@ -170,7 +170,7 @@ class HudProxyHandler(RequestHandler):
         def pump():
             try:
                 sock = socket.create_connection((host, port), timeout=10)
-                sock.settimeout(None)  # SOCK_NONBLOCK_V5
+                sock.settimeout(None)
                 req = (
                     "GET " + path + " HTTP/1.1\r\n"
                     "Host: " + str(host) + ":" + str(port) + "\r\n"

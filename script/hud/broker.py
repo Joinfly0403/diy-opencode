@@ -7,9 +7,6 @@
   3. 发放 handle，并把前端请求代理到对应实例
 
 不做什么：不存会话、不碰 OSSDIY 数据、不读 X-User-Name。
-
-用法：
-  python3 broker.py --port 18765
 """
 
 import argparse
@@ -18,7 +15,6 @@ import json
 import os
 import re
 import secrets
-import shutil
 import subprocess
 import sys
 import threading
@@ -90,7 +86,6 @@ class Server:
         self.handles_path = os.path.join(self.state_dir, "handles.json")
         self._load_handles()
 
-    # ---------- 持久化 ----------
     def _load_handles(self):
         try:
             with open(self.handles_path, encoding="utf-8") as fh:
@@ -107,7 +102,6 @@ class Server:
             fh.write(payload)
         os.replace(tmp, self.handles_path)
 
-    # ---------- 实例 ----------
     def instance(self, account):
         entry = INSTANCES.get(account)
         if not entry:
@@ -119,7 +113,6 @@ class Server:
         return entry
 
     def ensure_instance(self, account):
-        """复用已有实例；没有则起一个（登录由调用方先完成，这里只起 serve）。"""
         entry = self.instance(account)
         if entry and entry.get("state") == "ready":
             cred = credential(self.root_base, account)
@@ -140,7 +133,6 @@ class Server:
             return False
 
     def start_login(self):
-        """起一个登录进程；它成功后自身变成 serve。"""
         if any(t.get("state") in ("pending", "serving") for t in TICKETS.values()):
             return None, "另一个登录正在进行"
         ticket = secrets.token_urlsafe(16)
@@ -203,7 +195,7 @@ class Server:
                     self._finish(ticket, entry)
                     continue
             proc.wait(timeout=5)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log("pump error for %s: %s" % (ticket, exc))
         if entry["state"] in ("pending", "serving"):
             entry["state"] = "failed"
@@ -240,6 +232,13 @@ class Server:
         cred = credential(self.root_base, info["account"])
         if not cred:
             return None
+        try:  # HANDLE_LIVE_V1：端口不通说明实例已死，handle 视为无效
+            import socket as _socket
+            _c = _socket.create_connection(("127.0.0.1", cred["port"]), timeout=0.5)
+            _c.close()
+        except Exception:
+            log("handle %s -> account %s port %d dead" % (handle[:8], info["account"], cred["port"]))
+            return None
         return {"account": info["account"], "port": cred["port"], "password": cred["password"]}
 
 
@@ -251,10 +250,9 @@ class Handler(BaseHTTPRequestHandler):
     def app(self):
         return self.server.app
 
-    def log_message(self, fmt, *args):  # noqa: A003
+    def log_message(self, fmt, *args):
         log("http %s - %s" % (self.address_string(), fmt % args))
 
-    # ---------- 工具 ----------
     def body(self):
         length = int(self.headers.get("Content-Length") or 0)
         if not length:
@@ -273,19 +271,16 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def require_handle(self):
-        # EventSource 不能自定义请求头，因此也接受 ?handle=
         handle = self.headers.get("X-Hud-Handle") or ""
         if not handle:
-            from urllib.parse import urlparse as _u, parse_qs as _q
-            handle = (_q(_u(self.path).query).get("handle") or [""])[0]
+            handle = (parse_qs(urlparse(self.path).query).get("handle") or [""])[0]
         info = self.app.resolve(handle)
         if not info:
             self.send_json(401, {"error": "handle_invalid"})
             return None, None
         return handle, info
 
-    # ---------- 路由 ----------
-    def do_GET(self):  # noqa: N802
+    def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
         if path == "/status":
@@ -323,7 +318,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         self.send_json(404, {"error": "not_found"})
 
-    def do_POST(self):  # noqa: N802
+    def do_POST(self):
         parsed = urlparse(self.path)
         path = parsed.path
         if path == "/login/start":
@@ -367,17 +362,61 @@ class Handler(BaseHTTPRequestHandler):
             return
         self.send_json(404, {"error": "not_found"})
 
-    # ---------- 代理 ----------
     def proxy(self, path, info, parsed):
         body = b""
         if self.command == "POST":
             length = int(self.headers.get("Content-Length") or 0)
             body = self.rfile.read(length) if length else b"{}"
         method = self.command
+        if path == "/agent/session/delete":
+            try:
+                data = json.loads(body.decode("utf-8"))
+            except ValueError:
+                self.send_json(400, {"error": "bad_request"})
+                return
+            sid = data.get("sessionID")
+            if not sid:
+                self.send_json(400, {"error": "bad_request"})
+                return
+            method = "DELETE"
         if path == "/agent/events":
             self.stream_events(info)
             return
-        target, payload = self.map_path(path, parsed, body)
+        if method == "DELETE":
+            target, payload = "/api/session/%s" % sid, None
+        elif path == "/agent/session/title":
+            try:
+                data = json.loads(body.decode("utf-8"))
+            except ValueError:
+                self.send_json(400, {"error": "bad_request"})
+                return
+            sid2 = data.get("sessionID")
+            title = (data.get("title") or "").strip()
+            if not sid2 or not title:
+                self.send_json(400, {"error": "bad_request"})
+                return
+            method = "PATCH"
+            target = "/api/session/%s" % sid2
+            payload = json.dumps({"title": title}).encode("utf-8")
+        elif path == "/agent/session/perms":
+            q = parse_qs(parsed.query)
+            sid = q.get("sessionID", [""])[0]
+            if method == "POST":
+                try:
+                    data = json.loads(body.decode("utf-8"))
+                except ValueError:
+                    self.send_json(400, {"error": "bad_request"})
+                    return
+                sid = data.get("sessionID") or sid
+                mode = data.get("mode") or "ask"
+                rules = [{"action": "*", "resource": "*", "effect": "allow"}] if mode == "bypass" else []
+                method = "PATCH"
+                target = "/api/session/%s" % sid
+                payload = json.dumps({"permissions": rules}).encode("utf-8")
+            else:
+                target, payload = "/api/session/%s" % sid, None
+        else:
+            target, payload = self.map_path(path, parsed, body)
         if target is None:
             self.send_json(400, {"error": "bad_request"})
             return
@@ -393,12 +432,34 @@ class Handler(BaseHTTPRequestHandler):
         except urllib.error.HTTPError as exc:
             data = exc.read()
             status = exc.code
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self.send_json(502, {"error": "upstream_failed", "detail": str(exc)})
             return
+        if path == "/agent/models":  # MODEL_SANITIZE_V2（白名单，只放前端需要的字段）
+            try:
+                obj = json.loads(data.decode("utf-8"))
+                safe = []
+                for m in obj.get("data") or []:
+                    if not isinstance(m, dict):
+                        continue
+                    safe.append({
+                        "id": m.get("id"),
+                        "providerID": m.get("providerID"),
+                        "name": m.get("name") or m.get("id"),
+                        "type": m.get("type") or "chat",
+                        "enabled": m.get("enabled", True),
+                        "status": m.get("status"),
+                    })
+                obj["data"] = safe
+                data = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+            except Exception:
+                pass
         if status == 401:
             self.send_json(401, {"error": "upstream_unauthorized"})
             return
+        if status == 204:  # NO204_V1：204 在部分网关/客户端上会变成 500
+            status = 200
+            data = b'{"ok":true}'
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
@@ -411,10 +472,16 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/agent/session":
             return "/api/session", body
         if path == "/agent/messages":
-            session = (parse_qs(parsed.query).get("sessionID") or [""])[0]
+            q = parse_qs(parsed.query)
+            session = (q.get("sessionID") or [""])[0]
             if not session:
                 return None, None
-            return "/api/session/%s/message" % session, None
+            extra = []
+            for k in ("order", "limit", "cursor"):
+                if q.get(k):
+                    extra.append("%s=%s" % (k, q[k][0]))
+            suffix = ("?" + "&".join(extra)) if extra else ""
+            return "/api/session/%s/message%s" % (session, suffix), None
         if path == "/agent/prompt":
             try:
                 data = json.loads(body.decode("utf-8"))
@@ -437,6 +504,16 @@ class Handler(BaseHTTPRequestHandler):
             if data.get("message"):
                 payload["message"] = data["message"]
             return "/api/session/%s/permission/%s/reply" % (session, request), json.dumps(payload).encode("utf-8")
+        if path == "/agent/switchAgent":
+            try:
+                data = json.loads(body.decode("utf-8"))
+            except ValueError:
+                return None, None
+            session = data.get("sessionID")
+            agent = data.get("agent")
+            if not session or not agent:
+                return None, None
+            return "/api/session/%s/agent" % session, json.dumps({"agent": agent}).encode("utf-8")
         if path == "/agent/models":
             return "/api/model", None
         if path == "/agent/model":
@@ -465,8 +542,7 @@ class Handler(BaseHTTPRequestHandler):
             form = data.get("formID")
             if not session or not form:
                 return None, None
-            payload = {"answer": data.get("answer") or {}}
-            return "/api/session/%s/form/%s/reply" % (session, form), json.dumps(payload).encode("utf-8")
+            return "/api/session/%s/form/%s/reply" % (session, form), json.dumps({"answer": data.get("answer") or {}}).encode("utf-8")
         if path == "/agent/interrupt":
             try:
                 data = json.loads(body.decode("utf-8"))
@@ -486,7 +562,7 @@ class Handler(BaseHTTPRequestHandler):
                 "Accept": "text/event-stream",
             })
             upstream = conn.getresponse()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self.send_json(502, {"error": "upstream_failed", "detail": str(exc)})
             return
         if upstream.status != 200:
@@ -511,7 +587,7 @@ class Handler(BaseHTTPRequestHandler):
                     self.wfile.write(b": ping\n\n")
                     self.wfile.flush()
                     last_ping = time.time()
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
         finally:
             try:

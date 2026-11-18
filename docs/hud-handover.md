@@ -547,6 +547,73 @@ done
 
 ---
 
+## 10. 仓库 ↔ 服务器：如何保证 install 后仍然可用
+
+### 10.1 三层保障
+
+| 层 | 位置 | 作用 |
+|---|---|---|
+| ① 运行时快照 | 服务器 `/opt/cloud/manager/tools/cogagent-hud/assets/` | `recover.sh apply` 的唯一依据；**重装 OSSDesign 包后一条命令恢复** |
+| ② 仓库镜像 | `script/hud/{broker.py,hud_proxy.py,hud.js,recover.sh}` + `script/hud/server/`（原样留档） | 逐字节等于线上；可审计、可回滚、可部署到新机器 |
+| ③ 部署脚本 | `script/hud/deploy.sh` | 从仓库文件安装：版本号递增、改 bootstrap、打注册、重启、快照、自检 |
+
+### 10.2 为什么"增量改出来的代码"也能可靠重装
+
+| 场景 | 恢复路径 |
+|---|---|
+| 重装 **OSSDesign 包**（版本目录被替换） | `bash /opt/cloud/manager/tools/cogagent-hud/recover.sh apply` → 从 ① 恢复桥、注册、前端、bootstrap |
+| 机器重启 | systemd 拉起 broker；OSSDesign 自启；缺失文件时 `apply` |
+| 换新机器 | 装 cogagent 包（打 serve-only 补丁）→ 拷 `script/hud/` → `bash deploy.sh`（从 ② 安装） |
+| 想回滚某版前端 | `hud.vN.js` 全部保留，改 bootstrap 指向即可（不用改代码） |
+
+### 10.3 一致性校验
+
+对比服务器文件 sha256 与 `script/hud/manifest.json`：
+
+```bash
+# 执行用户：root
+APP_ROOT=$(readlink -f /opt/cloud/manager/apps/OSSDesignService)
+B=/opt/cloud/manager/tools/cogagent-hud
+sha256sum "$B/broker.py" "$B/recover.sh" \
+          "$APP_ROOT/pyscript/ossdesign/interface/hud_proxy.py" \
+          "$APP_ROOT/webapps/ossdesignwebsite/plugin/hud/hud.v59.js"
+```
+
+### 10.4 纪律（必须遵守）
+
+1. **线上每改一次 → 立刻 `recover.sh snapshot`**（否则 assets 落后，重装就回退）
+2. **当天收尾 → 从服务器导出 → 覆盖仓库 → 更新 manifest → 提交**（见 `script/hud/SYNC.md`）
+3. 不在服务器上长期保留"仓库里没有的改动"
+
+### 10.5 当前线上版本（2026-11-18 20:45 导出）
+
+| 文件 | 大小 | sha256（前 16 位） |
+|---|---|---|
+| `broker.py` | 23653 | `f857343b8f56d6c7` |
+| `hud_proxy.py` | 7253 | `07a0af25b303fde0` |
+| `hud.js`（= `hud.v59.js`） | 61024 | `e2163227a9d78c42` |
+| `recover.sh` | 7919 | `25ab3363bac076cd` |
+
+---
+
+## 11. 版本日志补充（v39 → v59）
+
+| 版本 | 改动 |
+|---|---|
+| v39 | 会话列表搜索 + 删除（`✎` 前身：先只有 ×） |
+| v40 | 权限模式下拉：询问 / 全放行（`PATCH /api/session/:id {permissions}`） |
+| v41–v44 | 消息分页（首屏 30 条 + 加载更多）、cursor 修正、切换加速 |
+| v45–v46 | 停止按钮（`POST .../interrupt`），从标题栏移到输入行 |
+| v47 | 会话徽标：bypass / 运行中 / 等待 |
+| v48 | 审批卡命令高亮（metadata 里的 command/path） |
+| v49 | 修复 Shadow DOM 下卡片重复（`document.getElementById` → `msgs.querySelector`） |
+| v51 | reasoning 折叠 + 消息复制 + 用量/成本 |
+| v52 | 复制按钮移到气泡右下角 |
+| v53–v55 | 语音输入（Web Speech API）、位置、自动聚焦 |
+| v56–v57 | SSE 断线补拉 + 会话重命名（`✎` + 双击委托） |
+| v58 | `✎`/× 仅悬停显示 |
+| v59 | 用户模式 / 开发者模式（`plan` / `build` 切换） |
+
 ## 附录 A：`hud_proxy.py`（桥，含诊断补丁）
 
 ```python

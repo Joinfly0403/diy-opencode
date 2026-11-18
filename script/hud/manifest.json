@@ -1,0 +1,37 @@
+{
+  "generatedAt": "2026-11-18T20:45:00+08:00",
+  "liveVersion": "hud.v59.js",
+  "note": "由服务器原样导出（script/hud/server/），部署用 deploy.sh；每次线上改动后必须重新导出并更新本文件。",
+  "files": [
+    {
+      "name": "broker.py",
+      "size": 23653,
+      "sha256": "f857343b8f56d6c7f40defd15c795358bb2186dc2a88364567cda6c86c73b132",
+      "serverPath": "/opt/cloud/manager/tools/cogagent-hud/broker.py"
+    },
+    {
+      "name": "hud_proxy.py",
+      "size": 7253,
+      "sha256": "07a0af25b303fde0e3fc95d4151a54c90755cccd178c59975238feeeff113d2b",
+      "serverPath": "/opt/cloud/manager/apps/OSSDesignService/pyscript/ossdesign/interface/hud_proxy.py"
+    },
+    {
+      "name": "hud.js",
+      "size": 61024,
+      "sha256": "e2163227a9d78c428987717c60bbe0e128b9d3ed5d229df92e8133a42fd476a5",
+      "serverPath": "/opt/cloud/manager/apps/OSSDesignService/webapps/ossdesignwebsite/plugin/hud/hud.v59.js"
+    },
+    {
+      "name": "recover.sh",
+      "size": 7919,
+      "sha256": "25ab3363bac076cd32b7662511e53c6a0ff45ef13a7920406fd3510fa63833de",
+      "serverPath": "/opt/cloud/manager/tools/cogagent-hud/recover.sh"
+    },
+    {
+      "name": "ossdiyservice.py",
+      "size": 3445,
+      "sha256": "8f47db5be8bb480de692ec879a982500d24e1ef63f20299c4a069bbe5817d361",
+      "serverPath": "/opt/cloud/manager/apps/OSSDesignService/pyscript/ossdiyservice.py"
+    }
+  ]
+}
