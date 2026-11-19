@@ -48,8 +48,13 @@ say "KEEP     : $KEEP"
 
 # ---- 自动版本号 ----
 if [ -z "$VERSION" ]; then
-  MAX=$(ls "$HUD_DIR"/hud.v*.js 2>/dev/null | sed -n 's/.*hud\.v\([0-9]\+\)\.js/\1/p' | sort -n | tail -1)
-  [ -n "$MAX" ] || MAX=0
+  MAX=0
+  for f in "$HUD_DIR"/hud.v*.js; do
+    [ -e "$f" ] || continue
+    n=$(basename "$f" .js); n=${n#hud.v}
+    case "$n" in ''|*[!0-9]*) continue;; esac
+    [ "$n" -gt "$MAX" ] && MAX=$n
+  done
   VERSION="v$((MAX + 1))"
 fi
 HUD_FILE="hud.$VERSION.js"
