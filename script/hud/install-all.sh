@@ -19,6 +19,7 @@ LAUNCHER=/usr/local/bin/cogagent
 
 CHECK=0; PATCH_LAUNCHER=0; PKG=""; YES_WIPE=0
 NO_BACKUP=0; BACKUP_DIR=/var/backups; NO_RESTART_OSS=0; KEEP=0
+NO_RESTORE=0; RESTORE=""; LIST_BACKUPS=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -31,6 +32,9 @@ while [ $# -gt 0 ]; do
     --backup-dir=*) BACKUP_DIR="${1#*=}"; shift ;;
     --no-restart-oss) NO_RESTART_OSS=1; shift ;;
     --keep) KEEP=1; shift ;;
+    --no-restore) NO_RESTORE=1; shift ;;
+    --restore=*) RESTORE="${1#*=}"; shift ;;
+    --list-backups) LIST_BACKUPS=1; shift ;;
     -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
     *) echo "未知参数: $1"; exit 2 ;;
   esac
@@ -44,6 +48,12 @@ bad() { printf '[FAIL] %s\n' "$*"; }
 [ "$(id -un)" = "root" ] || { bad "请用 root 执行"; exit 1; }
 
 APP_ROOT=$(readlink -f /opt/cloud/manager/apps/OSSDesignService 2>/dev/null || true)
+
+if [ "$LIST_BACKUPS" = "1" ]; then
+  say "== 已有备份（$BACKUP_DIR）=="
+  ls -lh "$BACKUP_DIR"/cogagent-*.tgz 2>/dev/null || say "  （暂无）"
+  exit 0
+fi
 
 say "==================== 0) 环境检查 ===================="
 say "架构      : $(uname -m)"
@@ -160,6 +170,30 @@ fi
 
 if ! grep -q COGAGENT_SERVE_ONLY "$LAUNCHER" 2>/dev/null; then
   warn "启动器未打 serve-only 补丁：broker 将无法自动起实例（可加 --patch-launcher）"
+fi
+
+# ---- 数据还原（重装 cogagent 后默认自动还原最新备份）----
+if [ -n "$PKG" ] && [ "$NO_RESTORE" != "1" ] && [ "$NO_BACKUP" != "1" ] && [ -z "$RESTORE" ]; then
+  RESTORE=latest
+  say "本次是重装 cogagent：默认自动还原最新备份（--no-restore 可关闭）"
+fi
+
+if [ -n "$RESTORE" ]; then
+  if [ "$RESTORE" = "latest" ]; then
+    RESTORE=$(ls -t "$BACKUP_DIR"/cogagent-*.tgz 2>/dev/null | head -1)
+  fi
+  if [ -z "${RESTORE:-}" ] || [ ! -f "$RESTORE" ]; then
+    bad "找不到要还原的备份：${RESTORE:-<空>}"; exit 7
+  fi
+  say "还原数据：$RESTORE"
+  tar xzf "$RESTORE" -C / || { bad "解包失败"; exit 8; }
+  SVC_USER=ossadm
+  id "$SVC_USER" >/dev/null 2>&1 || SVC_USER=root
+  SVC_GROUP=$(id -gn "$SVC_USER")
+  [ -d /srv/cogagent/users ] && chown -R "$SVC_USER":"$SVC_GROUP" /srv/cogagent/users 2>/dev/null || true
+  [ -d /srv/cogagent/login-logs ] && chown -R "$SVC_USER":"$SVC_GROUP" /srv/cogagent/login-logs 2>/dev/null || true
+  ok "已还原 /srv/cogagent 与 /etc/cogagent（属主：$SVC_USER）"
+  warn "CAC 登录态可能已过期：首次使用请重新 SSO 登录"
 fi
 
 say ""
