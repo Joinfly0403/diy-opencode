@@ -1,13 +1,14 @@
 #!/bin/bash
 # cogagent + HUD 一体化安装（幂等）
 #
-# 用法（root）：
 #   bash install-all.sh --check                  只体检，不改任何东西
 #   bash install-all.sh                          只安装/升级 HUD（不动 cogagent）
-#   bash install-all.sh --patch-launcher         额外重打 cogagent serve-only 补丁
+#   bash install-all.sh --patch-launcher         额外重打 serve-only 补丁
 #   bash install-all.sh --cogagent-pkg=/root/x.run --yes-wipe
-#                                                重装 cogagent（会清空 /srv/cogagent，默认先备份）
-#   可选：--no-backup  --backup-dir=/path  --no-restart-oss  --keep(不切前端版本)
+#                                                重装 cogagent（默认先备份，装完自动还原）
+#   bash install-all.sh --restore=latest         手动还原最新备份
+#   bash install-all.sh --list-backups           列出备份
+#   其它：--no-restore --no-backup --backup-dir=/path --no-restart-oss --keep
 set -euo pipefail
 
 SRC=$(cd "$(dirname "$0")" && pwd)
@@ -47,13 +48,12 @@ bad() { printf '[FAIL] %s\n' "$*"; }
 
 [ "$(id -un)" = "root" ] || { bad "请用 root 执行"; exit 1; }
 
-SVC_USER=ossadm; id "$SVC_USER" >/dev/null 2>&1 || SVC_USER=root   # SVC_FALLBACK_V1
+SVC_USER=ossadm; id "$SVC_USER" >/dev/null 2>&1 || SVC_USER=root
 SVC_GROUP=$(id -gn "$SVC_USER")
-
 APP_ROOT=$(readlink -f /opt/cloud/manager/apps/OSSDesignService 2>/dev/null || true)
 
 if [ "$LIST_BACKUPS" = "1" ]; then
-  say "== 已有备份（$BACKUP_DIR）=="
+  say "== 备份列表（$BACKUP_DIR）=="
   ls -lh "$BACKUP_DIR"/cogagent-*.tgz 2>/dev/null || say "  （暂无）"
   exit 0
 fi
@@ -61,6 +61,7 @@ fi
 say "==================== 0) 环境检查 ===================="
 say "架构      : $(uname -m)"
 say "APP_ROOT  : ${APP_ROOT:-<解析失败>}"
+say "服务用户  : $SVC_USER"
 say "模式      : CHECK=$CHECK PATCH_LAUNCHER=$PATCH_LAUNCHER PKG=${PKG:-<未指定>} YES_WIPE=$YES_WIPE"
 
 FAIL=0
@@ -76,7 +77,7 @@ done
 say ""
 say "== cogagent 现状 =="
 if [ -x "$LAUNCHER" ]; then
-  N=$(grep -c COGAGENT_SERVE_ONLY "$LAUNCHER" 2>/dev/null || echo 0)
+  N=$(grep -c COGAGENT_SERVE_ONLY "$LAUNCHER" 2>/dev/null) || N=0
   ok "启动器存在（serve-only 标记 $N 处）"
 else
   warn "启动器缺失（需 --cogagent-pkg 安装，或先手工装 cogagent）"
@@ -85,7 +86,7 @@ fi
 [ -d "$TOOLS" ] && ok "$TOOLS" || warn "$TOOLS 不存在（首次安装会创建）"
 systemctl is-active --quiet cogagent-hud-broker 2>/dev/null && ok "broker active" || warn "broker 未运行"
 
-# ---- 完整性/兼容性检查（COMPAT_CHECK_V1）----
+# ---- 安装完整性 ----
 BOOT_FILE="$APP_ROOT/webapps/ossdesignwebsite/osmuwebsite_app/app_main.js"
 HUD_DIR_CHK="$APP_ROOT/webapps/ossdesignwebsite/plugin/hud"
 PROXY_CHK="$APP_ROOT/pyscript/ossdesign/interface/hud_proxy.py"
@@ -94,25 +95,26 @@ SVC_CHK="$APP_ROOT/pyscript/ossdiyservice.py"
 say ""
 say "== 安装完整性 =="
 BOOT_MARK=0; REG_CNT=0; HUD_CNT=0; PROXY_SIZE=0
-[ -f "$BOOT_FILE" ] && BOOT_MARK=$(grep -c "oss-hud-bootstrap-v2" "$BOOT_FILE" 2>/dev/null || echo 0)
-[ -f "$SVC_CHK" ] && REG_CNT=$(grep -c "HUD_BRIDGE_V3" "$SVC_CHK" 2>/dev/null || echo 0)
-[ -d "$HUD_DIR_CHK" ] && HUD_CNT=$(ls -1 "$HUD_DIR_CHK"/hud*.js 2>/dev/null | wc -l | tr -d ' ')
-[ -f "$PROXY_CHK" ] && PROXY_SIZE=$(stat -c%s "$PROXY_CHK" 2>/dev/null || echo 0)
+if [ -f "$BOOT_FILE" ] && grep -q "oss-hud-bootstrap-v2" "$BOOT_FILE" 2>/dev/null; then BOOT_MARK=1; fi
+if [ -f "$SVC_CHK" ] && grep -q "HUD_BRIDGE_V3" "$SVC_CHK" 2>/dev/null; then REG_CNT=1; fi
+if [ -d "$HUD_DIR_CHK" ]; then
+  for hf in "$HUD_DIR_CHK"/hud*.js; do
+    [ -e "$hf" ] && HUD_CNT=$((HUD_CNT + 1))
+  done
+fi
+if [ -f "$PROXY_CHK" ]; then PROXY_SIZE=$(stat -c%s "$PROXY_CHK" 2>/dev/null); fi
+[ -n "${PROXY_SIZE:-}" ] || PROXY_SIZE=0
 
 [ "$PROXY_SIZE" -gt 0 ] && ok "桥文件（$PROXY_SIZE 字节）" || warn "桥文件缺失（需要安装）"
-[ "$REG_CNT" -gt 0 ] && ok "注册块 HUD_BRIDGE_V3（$REG_CNT 处）" || warn "注册块缺失（需要安装）"
+[ "$REG_CNT" -gt 0 ] && ok "注册块 HUD_BRIDGE_V3" || warn "注册块缺失（需要安装）"
 [ "$HUD_CNT" -gt 0 ] && ok "前端文件（$HUD_CNT 个）" || warn "前端文件缺失（需要安装）"
-
 if [ "$BOOT_MARK" -gt 0 ]; then
-  CUR_HUD=$(grep -o "plugin/hud/hud[^\"]*" "$BOOT_FILE" 2>/dev/null | head -1)
+  CUR_HUD=$(grep -o "plugin/hud/hud[^\"]*" "$BOOT_FILE" 2>/dev/null | head -1) || CUR_HUD="?"
   ok "bootstrap 已注入（指向 ${CUR_HUD:-?}）"
 else
   warn "检测到 OSSDesign 升级或未安装：app_main.js 里没有 bootstrap 标记"
-  say "       → 运行 bash install-all.sh 自动补齐（幂等，不会重复添加）"
+  say "       → 运行 bash install-all.sh 自动补齐（幂等）"
 fi
-
-systemctl is-active --quiet cogagent-hud-broker 2>/dev/null && ok "broker active" || warn "broker 未运行"
-curl -s --noproxy '*' -o /dev/null -w '' --max-time 3 http://127.0.0.1:18765/status 2>/dev/null && ok "broker /status 可达" || warn "broker /status 不可达"
 
 if [ "$CHECK" = "1" ]; then
   say ""
@@ -130,18 +132,24 @@ if [ -n "$PKG" ]; then
   esac
   if [ "$YES_WIPE" != "1" ]; then
     bad "重装 cogagent 会删除 /srv/cogagent（所有会话与工作区）"
-    say "      确认要重装请加 --yes-wipe；只想升级 HUD 就不要带 --cogagent-pkg"
+    say "      确认要重装请加 --yes-wipe"
     exit 3
   fi
   if [ "$NO_BACKUP" != "1" ]; then
     install -d -m 0700 "$BACKUP_DIR"
     TS=$(date +%Y%m%d%H%M%S)
     BK="$BACKUP_DIR/cogagent-$TS.tgz"
-    say "备份 /srv/cogagent + /etc/cogagent -> $BK（可能较慢）"
-    tar czf "$BK" -C / srv/cogagent etc/cogagent 2>/dev/null || warn "备份部分失败（继续）"
-    ls -lh "$BK" 2>/dev/null || true
+    say "备份 /srv/cogagent + /etc/cogagent -> $BK"
+    if [ -d /srv/cogagent ] || [ -d /etc/cogagent ]; then
+      tar czf "$BK" -C / srv/cogagent etc/cogagent 2>/dev/null || warn "备份部分失败"
+      ls -lh "$BK" 2>/dev/null || true
+    else
+      warn "没有可备份的 cogagent 数据（全新环境）"
+      BK=""
+    fi
   else
-    warn "已指定 --no-backup：不备份，数据将不可恢复"
+    warn "已指定 --no-backup：数据将不可恢复"
+    BK=""
   fi
   say "即将删除：/usr/local/lib/cogagent /usr/local/bin/cogagent /etc/cogagent /srv/cogagent /var/log/cogagent"
   say "5 秒后开始安装…（Ctrl+C 可取消）"
@@ -151,86 +159,70 @@ if [ -n "$PKG" ]; then
 fi
 
 if [ "$PATCH_LAUNCHER" = "1" ] || [ -n "$PKG" ]; then
-  say "打 serve-only 补丁…"
-  python3 - "$LAUNCHER" <<'PYPATCH'
-import sys, shutil, time
+  if [ -x "$LAUNCHER" ]; then
+    say "打 serve-only 补丁…"
+    python3 - "$LAUNCHER" <<'PYPATCH'
+import sys, shutil, time, os
 p = sys.argv[1]
 s = open(p, encoding="utf-8").read()
 orig = s
-bak = p + ".bak." + time.strftime("%Y%m%d%H%M%S")
 
 a1 = '    root = os.path.join(cfg["rootBase"].rstrip("/"), token["account"])\n'
-b1 = a1 + '''    if os.environ.get("COGAGENT_SERVE_ONLY") == "1":  # SERVE_ONLY_EARLY_ACCOUNT
-        print("COGAGENT_LOGIN_ACCOUNT=" + token["account"], flush=True)
-'''
+b1 = a1 + '    if os.environ.get("COGAGENT_SERVE_ONLY") == "1":  # SERVE_ONLY_EARLY_ACCOUNT\n        print("COGAGENT_LOGIN_ACCOUNT=" + token["account"], flush=True)\n'
 if "SERVE_ONLY_EARLY_ACCOUNT" not in s:
     if a1 not in s:
         print("ANCHOR1_MISMATCH"); raise SystemExit(4)
     s = s.replace(a1, b1, 1)
 
 a2 = '    print("[cogagent] 账号 " + account + " 已有实例在运行")\n'
-b2 = '''    if os.environ.get("COGAGENT_SERVE_ONLY") == "1":  # SERVE_ONLY_REUSE_EXIT
-        print("[cogagent] serve-only：已有实例，本进程退出")
-        return handle
-''' + a2
+b2 = '    if os.environ.get("COGAGENT_SERVE_ONLY") == "1":  # SERVE_ONLY_REUSE_EXIT\n        print("[cogagent] serve-only：已有实例，本进程退出")\n        return handle\n' + a2
 if "SERVE_ONLY_REUSE_EXIT" not in s:
     if a2 not in s:
         print("ANCHOR2_MISMATCH"); raise SystemExit(5)
     s = s.replace(a2, b2, 1)
 
-a3 = '''    prepare_service(binary, port, env)
-    env["OPENCODE_SERVICE_PORT"] = str(port)
-'''
-b3 = '''    if os.environ.get("COGAGENT_SERVE_ONLY") == "1":  # SERVE_ONLY_NO_STOP
-        pass
-    else:
-        prepare_service(binary, port, env)
-    env["OPENCODE_SERVICE_PORT"] = str(port)
-'''
+a3 = '    prepare_service(binary, port, env)\n    env["OPENCODE_SERVICE_PORT"] = str(port)\n'
+b3 = '    if os.environ.get("COGAGENT_SERVE_ONLY") == "1":  # SERVE_ONLY_NO_STOP\n        pass\n    else:\n        prepare_service(binary, port, env)\n    env["OPENCODE_SERVICE_PORT"] = str(port)\n'
 if "SERVE_ONLY_NO_STOP" not in s and a3 in s:
     s = s.replace(a3, b3, 1)
 
 if s != orig:
-    shutil.copy2(p, bak)
+    shutil.copy2(p, p + ".bak." + time.strftime("%Y%m%d%H%M%S"))
     open(p, "w", encoding="utf-8").write(s)
-    import os; os.chmod(p, 0o755)
+    os.chmod(p, 0o755)
 compile(open(p, encoding="utf-8").read(), p, "exec")
 print("EARLY", s.count("SERVE_ONLY_EARLY_ACCOUNT"), "REUSE", s.count("SERVE_ONLY_REUSE_EXIT"), "NOSTOP", s.count("SERVE_ONLY_NO_STOP"))
 PYPATCH
-  if grep -q COGAGENT_SERVE_ONLY "$LAUNCHER"; then ok "补丁已生效"; else bad "补丁失败"; exit 6; fi
+    grep -q COGAGENT_SERVE_ONLY "$LAUNCHER" && ok "补丁已生效" || { bad "补丁失败"; exit 6; }
+  else
+    warn "启动器不存在，跳过补丁"
+  fi
 fi
 
-if ! grep -q COGAGENT_SERVE_ONLY "$LAUNCHER" 2>/dev/null; then
-  warn "启动器未打 serve-only 补丁：broker 将无法自动起实例（可加 --patch-launcher）"
-fi
-
-# ---- 数据还原（重装 cogagent 后默认自动还原最新备份）----
-if [ -n "$PKG" ] && [ "$NO_RESTORE" != "1" ] && [ "$NO_BACKUP" != "1" ] && [ -z "$RESTORE" ]; then
-  RESTORE=latest
-  say "本次是重装 cogagent：默认自动还原最新备份（--no-restore 可关闭）"
+if [ "$NO_RESTORE" != "1" ] && [ -n "$PKG" ] && [ -n "${BK:-}" ] && [ -f "${BK:-/nonexistent}" ] && [ -z "$RESTORE" ]; then
+  RESTORE="$BK"
+  say "本次是重装 cogagent：自动还原刚做的备份（--no-restore 可关闭）"
 fi
 
 if [ -n "$RESTORE" ]; then
   if [ "$RESTORE" = "latest" ]; then
-    RESTORE=$(ls -t "$BACKUP_DIR"/cogagent-*.tgz 2>/dev/null | head -1)
+    RESTORE=$(ls -t "$BACKUP_DIR"/cogagent-*.tgz 2>/dev/null | head -1) || RESTORE=""
   fi
   if [ -z "${RESTORE:-}" ] || [ ! -f "$RESTORE" ]; then
-    bad "找不到要还原的备份：${RESTORE:-<空>}"; exit 7
+    bad "找不到要还原的备份"; exit 7
   fi
   say "还原数据：$RESTORE"
   tar xzf "$RESTORE" -C / || { bad "解包失败"; exit 8; }
-  SVC_USER=ossadm
-  id "$SVC_USER" >/dev/null 2>&1 || SVC_USER=root
-  SVC_GROUP=$(id -gn "$SVC_USER")
-  [ -d /srv/cogagent/users ] && chown -R "$SVC_USER":"$SVC_GROUP" /srv/cogagent/users 2>/dev/null || true
-  [ -d /srv/cogagent/login-logs ] && chown -R "$SVC_USER":"$SVC_GROUP" /srv/cogagent/login-logs 2>/dev/null || true
+  for d in /srv/cogagent/users /srv/cogagent/login-logs; do
+    [ -d "$d" ] && chown -R "$SVC_USER":"$SVC_GROUP" "$d" 2>/dev/null || true
+  done
   ok "已还原 /srv/cogagent 与 /etc/cogagent（属主：$SVC_USER）"
   warn "CAC 登录态可能已过期：首次使用请重新 SSO 登录"
 fi
 
 say ""
 say "==================== 2) 目录与 systemd 单元 ===================="
-install -d -o "$SVC_USER" -g "$SVC_GROUP" -m 0750 "$TOOLS" 2>/dev/null || install -d -m 0750 "$TOOLS"
+install -d -m 0750 "$TOOLS"
 install -d -m 0700 "$STATE"
 install -d -m 0755 "$LOG"
 if [ ! -f "$UNIT" ]; then
@@ -254,24 +246,30 @@ WantedBy=multi-user.target
 UNITEOF
   ok "已写入 $UNIT"
 else
-  ok "单元已存在"
+  ok "systemd 单元已存在"
 fi
 systemctl daemon-reload
 systemctl enable --now cogagent-hud-broker >/dev/null 2>&1 || true
 
 say ""
-say "==================== 3) 部署 HUD（deploy.sh）===================="
+say "==================== 3) 部署 HUD ===================="
+DEPLOY_RC=0
 if [ "$KEEP" = "1" ]; then
-  bash "$SRC/deploy.sh" --keep
+  bash "$SRC/deploy.sh" --keep || DEPLOY_RC=$?
 else
-  bash "$SRC/deploy.sh"
+  bash "$SRC/deploy.sh" || DEPLOY_RC=$?
+fi
+if [ "$DEPLOY_RC" != "0" ]; then
+  warn "deploy.sh 返回 $DEPLOY_RC（多为注册锚点不匹配），继续补齐 bootstrap 与重启"
 fi
 
 say ""
 say "==================== 4) 自启动 bootstrap ===================="
 BOOT="$APP_ROOT/webapps/ossdesignwebsite/osmuwebsite_app/app_main.js"
 HUD_DIR="$APP_ROOT/webapps/ossdesignwebsite/plugin/hud"
-HUD_FILE=$(basename "$(ls -t "$HUD_DIR"/hud.v*.js 2>/dev/null | head -1)" 2>/dev/null || echo hud.js)
+HUD_FILE=$(basename "$(ls -t "$HUD_DIR"/hud.v*.js 2>/dev/null | head -1)" 2>/dev/null) || HUD_FILE="hud.js"
+[ -n "${HUD_FILE:-}" ] || HUD_FILE="hud.js"
+say "前端版本：$HUD_FILE"
 python3 - "$BOOT" "$HUD_FILE" <<'PYBOOT'
 import sys, shutil, time, re
 p, hud = sys.argv[1], sys.argv[2]
@@ -286,22 +284,20 @@ if "oss-hud-bootstrap-v2" in s:
     else:
         print("bootstrap 已指向", hud)
 else:
-    boot = (
-        ';/*oss-hud-bootstrap-v2*/(function(){try{'
-        'if(window.__OSS_HUD_BOOT_V2__)return;window.__OSS_HUD_BOOT_V2__=1;'
-        'var s=document.createElement("script");'
-        's.src="' + target + '";'
-        's.async=false;s.onerror=function(){};'
-        '(document.head||document.documentElement).appendChild(s);'
-        '}catch(e){}})();\n'
-    )
+    boot = (';/*oss-hud-bootstrap-v2*/(function(){try{'
+            'if(window.__OSS_HUD_BOOT_V2__)return;window.__OSS_HUD_BOOT_V2__=1;'
+            'var s=document.createElement("script");'
+            's.src="' + target + '";'
+            's.async=false;s.onerror=function(){};'
+            '(document.head||document.documentElement).appendChild(s);'
+            '}catch(e){}})();\n')
     shutil.copy2(p, p + ".bak." + time.strftime("%Y%m%d%H%M%S"))
     open(p, "w", encoding="utf-8", errors="surrogateescape").write(s + boot)
     print("bootstrap 已追加 ->", hud)
 PYBOOT
 chown "$SVC_USER":"$SVC_GROUP" "$BOOT" 2>/dev/null || true
 chmod 0640 "$BOOT"
-grep -o "plugin/hud/hud[^\"]*" "$BOOT" | head -1
+grep -o "plugin/hud/hud[^\"]*" "$BOOT" | head -1 || true
 
 say ""
 say "==================== 5) 重启 ===================="
@@ -330,6 +326,6 @@ say ""
 say "==================== 完成 ===================="
 say "前端版本 : $HUD_FILE"
 say "访问方式 : 浏览器打开 OSSDesign 页面，Ctrl+Shift+R"
-say "首次使用 : 点 COG 球 → 连接 cogagent → SSO 登录（旧 handle 已失效需重新登录）"
-say "回滚前端 : 改 app_main.js 里 hud.vN.js 为旧版本号即可（历史版本都保留）"
+say "首次使用 : 点 COG 球 → 连接 cogagent → SSO 登录"
+say "回滚前端 : 改 app_main.js 里 hud.vN.js 为旧版本号即可"
 say "日志     : /var/log/cogagent-hud/broker.log、/tmp/hud_bridge.log"

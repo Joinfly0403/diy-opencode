@@ -76,7 +76,7 @@ say "== 2) hud_proxy.py + 注册块 =="
 install -d -o "$SVC_USER" -g "$SVC_GROUP" -m 0750 "$(dirname "$PROXY")"
 install -m 0644 -o "$SVC_USER" -g "$SVC_GROUP" "$SRC/hud_proxy.py" "$PROXY"
 python3 -c "import py_compile;py_compile.compile('$PROXY', cfile='/tmp/proxy.pyc', doraise=True)"
-REG_CHANGED=0
+REG_CHANGED=0; REG_FAIL=0   # REG_SOFTFAIL_V1
 if grep -q "HUD_BRIDGE_V3" "$SVC" 2>/dev/null; then
   ok "注册块已存在"
 else
@@ -106,10 +106,11 @@ shutil.copy2(p, p + ".bak." + time.strftime("%Y%m%d%H%M%S"))
 open(p, "w", encoding="utf-8").write(s.replace(anchor, anchor + block, 1))
 print("REGISTERED")
 PY
-  case $? in
+  RC=$?
+  case $RC in
     0) REG_CHANGED=1; ok "已写入注册块" ;;
-    3) bad "锚点不匹配：ossdiyservice.py 结构变了，请先人工确认" ; exit 3 ;;
-    *) bad "注册失败"; exit 4 ;;
+    3) bad "锚点不匹配：ossdiyservice.py 结构不同，注册留待人工确认（其余步骤继续）"; REG_FAIL=1 ;;
+    *) bad "注册失败（其余步骤继续）"; REG_FAIL=1 ;;
   esac
 fi
 
@@ -170,8 +171,12 @@ bash "$R" snapshot | tail -5
 bash "$R" check || true
 
 say ""
+if [ "$REG_FAIL" = "1" ]; then
+  bad "注册块未写入：/hud/* 请求会 404，需按本机 ossdiyservice.py 结构补注册"
+fi
 if [ "$KEEP" = "1" ]; then
   say "完成（--keep：未切换线上版本；验证后可手动改指向或重跑不带 --keep）"
 else
   say "完成：线上现在是 $HUD_FILE，请浏览器 Ctrl+Shift+R"
 fi
+[ "$REG_FAIL" = "1" ] && exit 3 || true
