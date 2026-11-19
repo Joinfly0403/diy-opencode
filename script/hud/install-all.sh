@@ -47,6 +47,9 @@ bad() { printf '[FAIL] %s\n' "$*"; }
 
 [ "$(id -un)" = "root" ] || { bad "请用 root 执行"; exit 1; }
 
+SVC_USER=ossadm; id "$SVC_USER" >/dev/null 2>&1 || SVC_USER=root   # SVC_FALLBACK_V1
+SVC_GROUP=$(id -gn "$SVC_USER")
+
 APP_ROOT=$(readlink -f /opt/cloud/manager/apps/OSSDesignService 2>/dev/null || true)
 
 if [ "$LIST_BACKUPS" = "1" ]; then
@@ -227,7 +230,7 @@ fi
 
 say ""
 say "==================== 2) 目录与 systemd 单元 ===================="
-install -d -o ossadm -g ossgroup -m 0750 "$TOOLS" 2>/dev/null || install -d -m 0750 "$TOOLS"
+install -d -o "$SVC_USER" -g "$SVC_GROUP" -m 0750 "$TOOLS" 2>/dev/null || install -d -m 0750 "$TOOLS"
 install -d -m 0700 "$STATE"
 install -d -m 0755 "$LOG"
 if [ ! -f "$UNIT" ]; then
@@ -296,7 +299,7 @@ else:
     open(p, "w", encoding="utf-8", errors="surrogateescape").write(s + boot)
     print("bootstrap 已追加 ->", hud)
 PYBOOT
-chown ossadm:ossgroup "$BOOT" 2>/dev/null || true
+chown "$SVC_USER":"$SVC_GROUP" "$BOOT" 2>/dev/null || true
 chmod 0640 "$BOOT"
 grep -o "plugin/hud/hud[^\"]*" "$BOOT" | head -1
 
@@ -309,7 +312,11 @@ if [ "$NO_RESTART_OSS" = "1" ]; then
   warn "按参数跳过 OSSDesign 重启"
 else
   say "重启 OSSDesign（约 10-20 秒中断）…"
-  su - ossadm -c "bash /opt/cloud/manager/agent/bin/ipmc_adm -cmd restartapp -app OSSDesignService" 2>/dev/null | tail -3 || warn "restartapp 失败，请手动重启"
+  if id ossadm >/dev/null 2>&1; then
+    su - ossadm -c "bash /opt/cloud/manager/agent/bin/ipmc_adm -cmd restartapp -app OSSDesignService" 2>/dev/null | tail -3 || warn "restartapp 失败，请手动重启"
+  else
+    bash /opt/cloud/manager/agent/bin/ipmc_adm -cmd restartapp -app OSSDesignService 2>/dev/null | tail -3 || warn "restartapp 失败，请手动重启 OSSDesign"
+  fi
   sleep 10
   pgrep -f ossdiyservice.py >/dev/null && ok "OSSDesign running" || bad "OSSDesign 未运行"
 fi

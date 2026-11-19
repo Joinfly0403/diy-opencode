@@ -14,6 +14,13 @@ echo "目录 : $SRC"
 echo "安装包: ${RUN:-<未找到>}"
 ls -lh "$SRC" | head -20
 
+# PREFLIGHT_NEWENV_V1：新环境前置说明
+if [ ! -d /opt/cloud/manager/apps/OSSDesignService ]; then
+  echo "[FAIL] 未检测到 OSSDesign（/opt/cloud/manager/apps/OSSDesignService）"
+  echo "       本包只安装 cogagent + HUD，不含 OSSDesign 本体；请先安装 OSSDesign"
+  exit 1
+fi
+
 if [ -z "${RUN:-}" ]; then
   echo "[FAIL] 目录里没有 cogagent-install-*.run"
   exit 1

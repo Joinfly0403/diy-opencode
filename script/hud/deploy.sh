@@ -28,6 +28,9 @@ ok()   { printf '[ OK ] %s\n' "$*"; }
 bad()  { printf '[FAIL] %s\n' "$*"; }
 
 [ "$(id -un)" = "root" ] || { bad "请用 root 执行"; exit 1; }
+
+SVC_USER=ossadm; id "$SVC_USER" >/dev/null 2>&1 || SVC_USER=root   # SVC_FALLBACK_V1
+SVC_GROUP=$(id -gn "$SVC_USER")
 for f in broker.py hud_proxy.py hud.js recover.sh; do
   [ -f "$SRC/$f" ] || { bad "缺少仓库文件: $SRC/$f"; exit 1; }
 done
@@ -62,16 +65,16 @@ say "新版本   : $HUD_FILE"
 
 say ""
 say "== 1) broker.py / recover.sh =="
-install -d -o ossadm -g ossgroup -m 0750 "$TOOLS"
-install -m 0750 -o ossadm -g ossgroup "$SRC/broker.py" "$TOOLS/broker.py"
-install -m 0750 -o ossadm -g ossgroup "$SRC/recover.sh" "$TOOLS/recover.sh"
+install -d -o "$SVC_USER" -g "$SVC_GROUP" -m 0750 "$TOOLS"
+install -m 0750 -o "$SVC_USER" -g "$SVC_GROUP" "$SRC/broker.py" "$TOOLS/broker.py"
+install -m 0750 -o "$SVC_USER" -g "$SVC_GROUP" "$SRC/recover.sh" "$TOOLS/recover.sh"
 python3 -c "import py_compile;py_compile.compile('$TOOLS/broker.py', cfile='/tmp/broker.pyc', doraise=True)"
 ok "已安装 broker.py / recover.sh"
 
 say ""
 say "== 2) hud_proxy.py + 注册块 =="
-install -d -o ossadm -g ossgroup -m 0750 "$(dirname "$PROXY")"
-install -m 0644 -o ossadm -g ossgroup "$SRC/hud_proxy.py" "$PROXY"
+install -d -o "$SVC_USER" -g "$SVC_GROUP" -m 0750 "$(dirname "$PROXY")"
+install -m 0644 -o "$SVC_USER" -g "$SVC_GROUP" "$SRC/hud_proxy.py" "$PROXY"
 python3 -c "import py_compile;py_compile.compile('$PROXY', cfile='/tmp/proxy.pyc', doraise=True)"
 REG_CHANGED=0
 if grep -q "HUD_BRIDGE_V3" "$SVC" 2>/dev/null; then
@@ -112,8 +115,8 @@ fi
 
 say ""
 say "== 3) hud.js -> $HUD_FILE =="
-install -d -o ossadm -g ossgroup -m 0750 "$HUD_DIR"
-install -m 0640 -o ossadm -g ossgroup "$SRC/hud.js" "$HUD_DIR/$HUD_FILE"
+install -d -o "$SVC_USER" -g "$SVC_GROUP" -m 0750 "$HUD_DIR"
+install -m 0640 -o "$SVC_USER" -g "$SVC_GROUP" "$SRC/hud.js" "$HUD_DIR/$HUD_FILE"
 if command -v node >/dev/null 2>&1; then
   node --check "$HUD_DIR/$HUD_FILE"
   ok "js 语法检查通过"
@@ -142,7 +145,7 @@ for p in (boot, recover):
         else:
             print("no change", p.rsplit("/", 1)[-1])
 PY
-  chown ossadm:ossgroup "$BOOT" 2>/dev/null || true
+  chown "$SVC_USER":"$SVC_GROUP" "$BOOT" 2>/dev/null || true
   chmod 0640 "$BOOT"
   ok "bootstrap / recover 指向 $HUD_FILE"
 fi

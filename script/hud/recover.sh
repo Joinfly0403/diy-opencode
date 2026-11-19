@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# SVC_FALLBACK_V1：ossadm 不存在时用 root
+SVC_USER=ossadm; id "$SVC_USER" >/dev/null 2>&1 || SVC_USER=root
+SVC_GROUP=$(id -gn "$SVC_USER")
 # cogagent HUD 一键恢复 / 体检
 #   bash recover.sh check      只检查，不改任何东西
 #   bash recover.sh snapshot   把线上可用文件快照到 assets/
@@ -91,7 +95,7 @@ check_all() {
 do_snapshot() {
   local root
   root=$(app_root)
-  install -d -o ossadm -g ossgroup -m 0750 "$ASSETS"
+  install -d -o "$SVC_USER" -g "$SVC_GROUP" -m 0750 "$ASSETS"
 
   if [ -f "$root/pyscript/ossdesign/interface/hud_proxy.py" ]; then
     cp -f "$root/pyscript/ossdesign/interface/hud_proxy.py" "$ASSETS/hud_proxy.py"; ok "快照 hud_proxy.py"
@@ -109,7 +113,7 @@ do_snapshot() {
     cp -f "$TOOLS/recover.sh" "$ASSETS/recover.sh"; ok "快照 recover.sh"
   fi
 
-  chown -R ossadm:ossgroup "$ASSETS"
+  chown -R "$SVC_USER":"$SVC_GROUP" "$ASSETS"
   chmod 0640 "$ASSETS"/* 2>/dev/null
   say "快照目录: $ASSETS"
 }
@@ -122,21 +126,21 @@ do_apply() {
   hud="$root/webapps/ossdesignwebsite/plugin/hud/hud.v59.js"
   svc="$root/pyscript/ossdiyservice.py"
 
-  install -d -o ossadm -g ossgroup -m 0750 "$TOOLS" "$ASSETS"
+  install -d -o "$SVC_USER" -g "$SVC_GROUP" -m 0750 "$TOOLS" "$ASSETS"
 
   if [ ! -f "$TOOLS/broker.py" ] && [ -f "$ASSETS/broker.py" ]; then
-    install -m 0750 -o ossadm -g ossgroup "$ASSETS/broker.py" "$TOOLS/broker.py"; ok "恢复 broker.py"
+    install -m 0750 -o "$SVC_USER" -g "$SVC_GROUP" "$ASSETS/broker.py" "$TOOLS/broker.py"; ok "恢复 broker.py"
   elif [ -f "$TOOLS/broker.py" ]; then ok "broker.py 已存在"
   else bad "broker.py 缺失且无快照"; fi
 
   if [ ! -f "$proxy" ] && [ -f "$ASSETS/hud_proxy.py" ]; then
-    install -m 0644 -o ossadm -g ossgroup "$ASSETS/hud_proxy.py" "$proxy"; ok "恢复桥文件"
+    install -m 0644 -o "$SVC_USER" -g "$SVC_GROUP" "$ASSETS/hud_proxy.py" "$proxy"; ok "恢复桥文件"
   elif [ -f "$proxy" ]; then ok "桥文件已存在"
   else bad "桥文件缺失且无快照"; fi
 
   if [ ! -f "$hud" ] && [ -f "$ASSETS/hud.js" ]; then
-    install -d -o ossadm -g ossgroup -m 0750 "$(dirname "$hud")"
-    install -m 0640 -o ossadm -g ossgroup "$ASSETS/hud.js" "$hud"; ok "恢复前端"
+    install -d -o "$SVC_USER" -g "$SVC_GROUP" -m 0750 "$(dirname "$hud")"
+    install -m 0640 -o "$SVC_USER" -g "$SVC_GROUP" "$ASSETS/hud.js" "$hud"; ok "恢复前端"
   elif [ -f "$hud" ]; then ok "前端已存在"
   else bad "前端缺失且无快照"; fi
 
@@ -144,7 +148,7 @@ do_apply() {
   if [ -f "$BOOT" ] && ! grep -q "oss-hud-bootstrap-v2" "$BOOT" 2>/dev/null; then
     cp -f "$BOOT" "$BOOT.bak.$(date +%Y%m%d%H%M%S)"
     printf '\n%s\n' ';/*oss-hud-bootstrap-v2*/(function(){try{if(window.__OSS_HUD_BOOT_V2__)return;window.__OSS_HUD_BOOT_V2__=1;var s=document.createElement("script");s.src="/ossdesignwebsite/plugin/hud/hud.v59.js";s.async=false;s.onerror=function(){};(document.head||document.documentElement).appendChild(s);}catch(e){}})();' >> "$BOOT"
-    chown ossadm:ossgroup "$BOOT"; chmod 0640 "$BOOT"
+    chown "$SVC_USER":"$SVC_GROUP" "$BOOT"; chmod 0640 "$BOOT"
     ok "已追加 HUD bootstrap v2"
   fi
 
