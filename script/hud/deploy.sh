@@ -19,6 +19,9 @@ TOOLS=/opt/cloud/manager/tools/cogagent-hud
 APP_ROOT=$(readlink -f /opt/cloud/manager/apps/OSSDesignService)
 HUD_DIR="$APP_ROOT/webapps/ossdesignwebsite/plugin/hud"
 BOOT="$APP_ROOT/webapps/ossdesignwebsite/osmuwebsite_app/app_main.js"
+if [ ! -f "$BOOT" ]; then   # BOOT_FALLBACK_V1
+  BOOT=$(find "$APP_ROOT/webapps" -maxdepth 4 -name app_main.js 2>/dev/null | head -1) || BOOT=""
+fi
 PROXY="$APP_ROOT/pyscript/ossdesign/interface/hud_proxy.py"
 SVC="$APP_ROOT/pyscript/ossdiyservice.py"
 R="$TOOLS/recover.sh"
@@ -76,40 +79,17 @@ say "== 2) hud_proxy.py + 注册块 =="
 install -d -o "$SVC_USER" -g "$SVC_GROUP" -m 0750 "$(dirname "$PROXY")"
 install -m 0644 -o "$SVC_USER" -g "$SVC_GROUP" "$SRC/hud_proxy.py" "$PROXY"
 python3 -c "import py_compile;py_compile.compile('$PROXY', cfile='/tmp/proxy.pyc', doraise=True)"
-REG_CHANGED=0; REG_FAIL=0   # REG_SOFTFAIL_V1
+REG_CHANGED=0; REG_FAIL=0
 if grep -q "HUD_BRIDGE_V3" "$SVC" 2>/dev/null; then
   ok "注册块已存在"
 else
-  python3 - "$SVC" <<'PY'
-import sys, shutil, time
-p = sys.argv[1]
-s = open(p, encoding="utf-8").read()
-anchor = (
-    '    from rest.handler import OSSRequestHandler\n'
-    '    rest.G_APPLICATION.add_handlers(r".*", [(r"/ossdesignwebsite/(.*)", OSSRequestHandler)])\n'
-)
-if anchor not in s:
-    print("ANCHOR_MISMATCH"); raise SystemExit(3)
-block = (
-    "\n"
-    "    # HUD_BRIDGE_V3\n"
-    "    try:\n"
-    "        from interface.hud_proxy import HudProxyHandler\n"
-    '        rest.G_APPLICATION.add_handlers(\n'
-    '            r".*", [(r"/rest/ossdesign/v1/designer/hud/(.*)", HudProxyHandler)])\n'
-    '        print("[hud] bridge enabled")\n'
-    "    except Exception as _hud_exc:\n"
-    '        print("[hud] bridge disabled:", _hud_exc)\n'
-    "\n"
-)
-shutil.copy2(p, p + ".bak." + time.strftime("%Y%m%d%H%M%S"))
-open(p, "w", encoding="utf-8").write(s.replace(anchor, anchor + block, 1))
-print("REGISTERED")
-PY
+  install -m 0750 -o "$SVC_USER" -g "$SVC_GROUP" "$SRC/hud_register.py" "$TOOLS/hud_register.py" 2>/dev/null || install -m 0750 "$SRC/hud_register.py" "$TOOLS/hud_register.py"
+  python3 "$TOOLS/hud_register.py" "$SVC" --apply
   RC=$?
   case $RC in
-    0) REG_CHANGED=1; ok "已写入注册块" ;;
-    3) bad "锚点不匹配：ossdiyservice.py 结构不同，注册留待人工确认（其余步骤继续）"; REG_FAIL=1 ;;
+    0) REG_CHANGED=1; ok "已写入注册块（hud_register）" ;;
+    3) bad "未找到插入点：请看上面的诊断输出（其余步骤继续）"; REG_FAIL=1 ;;
+    4) bad "插入后语法校验失败（已回滚）"; REG_FAIL=1 ;;
     *) bad "注册失败（其余步骤继续）"; REG_FAIL=1 ;;
   esac
 fi

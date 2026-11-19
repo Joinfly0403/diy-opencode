@@ -155,35 +155,11 @@ do_apply() {
   if grep -q "$MARK_REG" "$svc" 2>/dev/null; then
     ok "注册已存在"
   else
-    python3 - "$svc" <<'PY'
-import sys, shutil, time
-p = sys.argv[1]
-s = open(p, encoding="utf-8").read()
-anchor = (
-    '    from rest.handler import OSSRequestHandler\n'
-    '    rest.G_APPLICATION.add_handlers(r".*", [(r"/ossdesignwebsite/(.*)", OSSRequestHandler)])\n'
-)
-if anchor not in s:
-    print("ANCHOR_MISMATCH"); raise SystemExit(3)
-block = (
-    "\n"
-    "    # HUD_BRIDGE_V3\n"
-    "    try:\n"
-    "        from interface.hud_proxy import HudProxyHandler\n"
-    '        rest.G_APPLICATION.add_handlers(\n'
-    '            r".*", [(r"/rest/ossdesign/v1/designer/hud/(.*)", HudProxyHandler)])\n'
-    '        print("[hud] bridge enabled")\n'
-    "    except Exception as _hud_exc:\n"
-    '        print("[hud] bridge disabled:", _hud_exc)\n'
-    "\n"
-)
-shutil.copy2(p, p + ".bak." + time.strftime("%Y%m%d%H%M%S"))
-open(p, "w", encoding="utf-8").write(s.replace(anchor, anchor + block, 1))
-print("REGISTERED")
-PY
+    python3 "$TOOLS/hud_register.py" "$svc" --apply
     case $? in
-      0) changed=1; ok "已写入注册块" ;;
-      3) bad "锚点不匹配，拒绝修改" ;;
+      0) changed=1; ok "已写入注册块（hud_register）" ;;
+      3) bad "未找到插入点，保留原文件" ;;
+      4) bad "语法校验失败（已回滚）" ;;
       *) bad "注册失败" ;;
     esac
   fi

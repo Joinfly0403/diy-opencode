@@ -69,7 +69,7 @@ FAIL=0
 command -v python3 >/dev/null && ok "python3" || { bad "缺 python3"; FAIL=1; }
 command -v systemctl >/dev/null && ok "systemd" || { bad "缺 systemd"; FAIL=1; }
 command -v node >/dev/null && ok "node（前端语法自检用）" || warn "没有 node，跳过前端语法检查"
-for f in broker.py hud_proxy.py hud.js recover.sh deploy.sh; do
+for f in broker.py hud_proxy.py hud.js recover.sh deploy.sh hud_register.py; do
   [ -f "$SRC/$f" ] || { bad "缺少部署文件: $f"; FAIL=1; }
 done
 [ "$FAIL" = "0" ] && ok "部署文件齐全"
@@ -266,10 +266,18 @@ fi
 say ""
 say "==================== 4) 自启动 bootstrap ===================="
 BOOT="$APP_ROOT/webapps/ossdesignwebsite/osmuwebsite_app/app_main.js"
+if [ ! -f "$BOOT" ]; then
+  BOOT=$(find "$APP_ROOT/webapps" -maxdepth 4 -name app_main.js 2>/dev/null | head -1) || BOOT=""
+fi
+if [ -z "${BOOT:-}" ] || [ ! -f "$BOOT" ]; then
+  warn "找不到 app_main.js，跳过 bootstrap 注入（HUD 需手动加载或平台入口已变）"
+  BOOT=""
+fi
 HUD_DIR="$APP_ROOT/webapps/ossdesignwebsite/plugin/hud"
 HUD_FILE=$(basename "$(ls -t "$HUD_DIR"/hud.v*.js 2>/dev/null | head -1)" 2>/dev/null) || HUD_FILE="hud.js"
 [ -n "${HUD_FILE:-}" ] || HUD_FILE="hud.js"
 say "前端版本：$HUD_FILE"
+if [ -n "${BOOT:-}" ]; then
 python3 - "$BOOT" "$HUD_FILE" <<'PYBOOT'
 import sys, shutil, time, re
 p, hud = sys.argv[1], sys.argv[2]
@@ -298,6 +306,7 @@ PYBOOT
 chown "$SVC_USER":"$SVC_GROUP" "$BOOT" 2>/dev/null || true
 chmod 0640 "$BOOT"
 grep -o "plugin/hud/hud[^\"]*" "$BOOT" | head -1 || true
+fi
 
 say ""
 say "==================== 5) 重启 ===================="
