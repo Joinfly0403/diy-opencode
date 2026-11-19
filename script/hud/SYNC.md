@@ -27,7 +27,7 @@ sha256sum /tmp/hud-sync.tgz
 ```powershell
 scp root@10.44.228.181:/tmp/hud-sync.tgz $env:TEMP\
 # 解包后覆盖仓库：
-#   script/hud/{broker.py,hud_proxy.py,hud.js,recover.sh}
+#   script/hud/common/{broker.py,hud_proxy.py,hud.js,recover.sh}
 #   script/hud/server/*（原样留档）
 ```
 

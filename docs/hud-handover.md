@@ -614,6 +614,66 @@ sha256sum "$B/broker.py" "$B/recover.sh" \
 | v58 | `✎`/× 仅悬停显示 |
 | v59 | 用户模式 / 开发者模式（`plan` / `build` 切换） |
 
+## 12. 双版本兼容（OSSDesign 270 / 272）
+
+### 12.1 结构差异
+
+| 维度 | 272.x（新） | 270.150.107（老） |
+|---|---|---|
+| 路由注册 | `ossdiyservice.py` 里 `rest.G_APPLICATION.add_handlers(...)` | 平台自研 ROA：`rest.INIT_APPLICATION` → `REGISTER_SERVANT` → `START_APPLICATION`；`OSSApplication` **没有 add_handlers** |
+| 底层 HTTP | Tornado | **也是 Tornado 6.6**（`OSSRequestHandler` 继承 `tornado.web.RequestHandler`） |
+| 静态目录 | `plugin/` 可用 | **只认已注册目录**，`plugin/` 404；`osmuwebsite_app/` 可用 |
+| 前端入口 | `osmuwebsite_app/app_main.js` | 同路径 |
+
+### 12.2 目录布局（profile 化）
+
+```
+script/hud/
+├── common/                     # 唯一实现（两版本共用）
+│   ├── broker.py hud_proxy.py hud.js
+│   ├── deploy.sh install-all.sh uninstall-all.sh restore.sh recover.sh
+│   ├── hud_register.py         # 272 风格注册器（add_handlers / Application 赋值）
+│   └── cogagent-hud-broker.service manifest.json
+├── profiles/
+│   ├── ossdesign-272/{register.sh,register_impl.py,notes.md}   # G_APPLICATION.add_handlers
+│   └── ossdesign-270/{register.sh,register_impl.py,notes.md}   # Tornado Application.__init__ 旁路
+├── install-full.sh             # 全量包入口
+└── SYNC.md
+```
+
+服务器上：`/opt/cloud/manager/tools/cogagent-hud/`（common 文件）+ `profiles/`。
+
+### 12.3 自动识别
+
+```bash
+grep -q "\.add_handlers(" ossdiyservice.py   → ossdesign-272
+grep -q "INIT_APPLICATION"  ossdiyservice.py  → ossdesign-270
+```
+
+`deploy.sh` 按识别结果调用对应 `profiles/<x>/register.sh`；前端**统一**装到
+`webapps/ossdesignwebsite/osmuwebsite_app/hud.vN.js`（两版本都可访问）。
+
+### 12.4 270 上必须的三条修复（已进 common/）
+
+| 标记 | 内容 |
+|---|---|
+| `HUD_BRIDGE_V6` | 给 `tornado.web.Application.__init__` 打旁路，`insert(0)` 插路由（append 会被平台兜底 handler 吞掉） |
+| `WAIT_READY_V1` | broker 不再依赖 launcher 打印 "listening"；账号识别后主动探测 `service-local.json` + `/api/session` |
+| `LOGIN_RESET_V1` / `LOGIN_RETRY_V2` | 卡住的登录票据自动清理；桥白名单补 `login/reset`、`login/active`；HUD 遇"另一个登录"自动重置重试 |
+
+### 12.5 分场景安装
+
+| 场景 | 命令 | 说明 |
+|---|---|---|
+| 272 装 HUD | `bash common/install-all.sh` | 自动注册、前端放 osmuwebsite_app |
+| 270 装 HUD | 同上 | profile 自动选 270 |
+| OSSDesign 升级 | 同上（重跑） | 新版本目录 = 全新文件，需重新注册 + 补 bootstrap |
+| 只升前端 | `bash common/deploy.sh` | 生成 hud.vN+1，改 bootstrap，不动注册 |
+| 重装 cogagent | `--cogagent-pkg=x.run --yes-wipe` | 自动备份 + 装完自动还原 |
+| 卸载 | `bash common/uninstall-all.sh --yes` | 两种标记都能清 |
+
+---
+
 ## 附录 A：`hud_proxy.py`（桥，含诊断补丁）
 
 ```python

@@ -57,7 +57,7 @@ echo "  已删除"
 if [ -n "${APP_ROOT:-}" ] && [ -d "${APP_ROOT:-}" ]; then
   echo
   echo "== 3) 前端 =="
-  rm -rf "${APP_ROOT:-}/webapps/ossdesignwebsite/plugin/hud"
+  rm -rf "${APP_ROOT:-}/webapps/ossdesignwebsite/osmuwebsite_app"
   echo "  已删除 plugin/hud/"
 
   echo
@@ -93,7 +93,7 @@ PYBOOT
 import sys, shutil, time
 p = sys.argv[1]
 s = open(p, encoding="utf-8").read()
-if "HUD_BRIDGE_V3" not in s:
+if "HUD_BRIDGE_V3" not in s and "HUD_BRIDGE_V6" not in s:
     print("  没有注册块（跳过）"); raise SystemExit(0)
 start = s.find("    # HUD_BRIDGE_V3")
 if start < 0:

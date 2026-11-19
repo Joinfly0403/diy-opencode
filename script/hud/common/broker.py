@@ -133,6 +133,22 @@ class Server:
             return False
 
     def start_login(self):
+        now = time.time()   # LOGIN_RESET_V1：先清理卡住的旧票据
+        for _tk, _e in list(TICKETS.items()):
+            if _e.get("state") not in ("pending", "serving"):
+                continue
+            _p = _e.get("proc")
+            _dead = _p is not None and _p.poll() is not None
+            _expired = now > (_e.get("deadline") or 0)
+            if _dead or _expired:
+                try:
+                    if _p is not None and _p.poll() is None:
+                        _p.terminate()
+                except Exception:
+                    pass
+                _e["state"] = "failed"
+                _e["reason"] = "登录超时" if _expired else "登录进程已退出"
+                log("ticket %s auto-cleaned (%s)" % (_tk, _e["reason"]))
         if any(t.get("state") in ("pending", "serving") for t in TICKETS.values()):
             return None, "另一个登录正在进行"
         ticket = secrets.token_urlsafe(16)
@@ -187,6 +203,7 @@ class Server:
                             pass
                         self._finish(ticket, entry, proc=None)
                         return
+                    threading.Thread(target=self._wait_ready, args=(ticket, entry), daemon=True).start()
                     continue
                 m = LISTEN_RE.search(line)
                 if m:
@@ -201,7 +218,25 @@ class Server:
             entry["state"] = "failed"
             entry["reason"] = "登录进程已退出"
 
+    def _wait_ready(self, ticket, entry):   # WAIT_READY_V1
+        """serve-only 不一定打印 listening 行：主动探测 service-local.json + HTTP。"""
+        account = entry.get("account")
+        deadline = time.time() + 150
+        while time.time() < deadline:
+            if entry.get("state") not in ("pending", "serving") or entry.get("handle"):
+                return
+            cred = credential(self.root_base, account)
+            if cred and self.probe(cred["port"], cred["password"]):
+                entry["port"] = cred["port"]
+                log("ticket %s ready via probe (port %d)" % (ticket, cred["port"]))
+                self._finish(ticket, entry)
+                return
+            time.sleep(1)
+        log("ticket %s wait_ready timeout" % ticket)
+
     def _finish(self, ticket, entry, proc="keep"):
+        if entry.get("handle"):   # WAIT_READY_V1
+            return
         account = entry["account"]
         port = entry["port"]
         cred = None
@@ -291,6 +326,13 @@ class Handler(BaseHTTPRequestHandler):
                 ]
             self.send_json(200, {"instances": items, "count": len(items)})
             return
+        if path == "/login/active":   # LOGIN_RESET_V1
+            items = []
+            for _tk, _e in list(TICKETS.items()):
+                items.append({"ticket": _tk[:8], "state": _e.get("state"), "account": _e.get("account"),
+                              "reason": _e.get("reason"), "age": int(time.time() - (_e.get("created") or 0))})
+            self.send_json(200, {"count": len(items), "tickets": items})
+            return
         if path == "/login/status":
             ticket = (parse_qs(parsed.query).get("ticket") or [""])[0]
             entry = TICKETS.get(ticket)
@@ -346,6 +388,21 @@ class Handler(BaseHTTPRequestHandler):
             entry["state"] = "failed"
             entry["reason"] = "已取消"
             self.send_json(200, {"state": "idle"})
+            return
+        if path == "/login/reset":   # LOGIN_RESET_V1
+            killed = 0
+            for _tk, _e in list(TICKETS.items()):
+                if _e.get("state") in ("pending", "serving"):
+                    try:
+                        _p = _e.get("proc")
+                        if _p is not None and _p.poll() is None:
+                            _p.terminate()
+                    except Exception:
+                        pass
+                    _e["state"] = "failed"
+                    _e["reason"] = "已重置"
+                    killed += 1
+            self.send_json(200, {"reset": killed})
             return
         if path == "/logout":
             handle = (self.body().get("handle") or self.headers.get("X-Hud-Handle") or "")

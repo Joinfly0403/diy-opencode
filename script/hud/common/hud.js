@@ -287,14 +287,29 @@
     msgs.appendChild(box);
   }
 
-  function startLogin() {
+  function startLogin() {   // LOGIN_RETRY_V2
+    doStartLogin(true);
+  }
+
+  function doStartLogin(canRetry) {
     setStatus("wait", "正在发起登录…");
     api("/login/start", { method: "POST" }).then(function (d) {
       state.ticket = d.ticket;
       if (d.url) window.open(d.url, "_blank");
       showToast("已在新标签页打开登录页，完成授权后会自动连接", "ok");
       pollLogin(0);
-    }).catch(function (e) { setStatus("bad", String(e.message || e)); showToast(String(e.message || e)); });
+    }).catch(function (e) {
+      var msg = String(e.message || e);
+      if (canRetry && msg.indexOf("另一个登录") >= 0) {
+        showToast("检测到残留登录，正在重置…", "ok");
+        api("/login/reset", { method: "POST" }).then(function () {
+          setTimeout(function () { doStartLogin(false); }, 600);
+        }).catch(function () { setStatus("bad", msg); showToast(msg); });
+        return;
+      }
+      setStatus("bad", msg);
+      showToast(msg);
+    });
   }
 
   function pollLogin(n) {

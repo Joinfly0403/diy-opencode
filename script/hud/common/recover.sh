@@ -63,7 +63,7 @@ check_all() {
   say "== 文件 =="
   if [ -f "$TOOLS/broker.py" ]; then ok "broker.py"; else bad "broker.py 缺失"; rc=1; fi
   if [ -f "$root/pyscript/ossdesign/interface/hud_proxy.py" ]; then ok "桥文件"; else bad "桥文件缺失"; rc=1; fi
-  if [ -f "$root/webapps/ossdesignwebsite/plugin/hud/hud.v59.js" ]; then ok "前端 hud.js"; else bad "前端缺失"; rc=1; fi
+  if [ -f "$root/webapps/ossdesignwebsite/osmuwebsite_app/hud.v59.js" ]; then ok "前端 hud.js"; else bad "前端缺失"; rc=1; fi
 
   say ""
   say "== 注册 =="
@@ -101,8 +101,8 @@ do_snapshot() {
     cp -f "$root/pyscript/ossdesign/interface/hud_proxy.py" "$ASSETS/hud_proxy.py"; ok "快照 hud_proxy.py"
   else bad "线上无 hud_proxy.py"; fi
 
-  if [ -f "$root/webapps/ossdesignwebsite/plugin/hud/hud.v59.js" ]; then
-    cp -f "$root/webapps/ossdesignwebsite/plugin/hud/hud.v59.js" "$ASSETS/hud.js"; ok "快照 hud.js"
+  if [ -f "$root/webapps/ossdesignwebsite/osmuwebsite_app/hud.v59.js" ]; then
+    cp -f "$root/webapps/ossdesignwebsite/osmuwebsite_app/hud.v59.js" "$ASSETS/hud.js"; ok "快照 hud.js"
   else bad "线上无 hud.js"; fi
 
   if [ -f "$TOOLS/broker.py" ]; then
@@ -123,7 +123,7 @@ do_apply() {
   changed=0
   root=$(app_root)
   proxy="$root/pyscript/ossdesign/interface/hud_proxy.py"
-  hud="$root/webapps/ossdesignwebsite/plugin/hud/hud.v59.js"
+  hud="$root/webapps/ossdesignwebsite/osmuwebsite_app/hud.v59.js"
   svc="$root/pyscript/ossdiyservice.py"
 
   install -d -o "$SVC_USER" -g "$SVC_GROUP" -m 0750 "$TOOLS" "$ASSETS"
@@ -147,7 +147,7 @@ do_apply() {
   BOOT="$root/webapps/ossdesignwebsite/osmuwebsite_app/app_main.js"
   if [ -f "$BOOT" ] && ! grep -q "oss-hud-bootstrap-v2" "$BOOT" 2>/dev/null; then
     cp -f "$BOOT" "$BOOT.bak.$(date +%Y%m%d%H%M%S)"
-    printf '\n%s\n' ';/*oss-hud-bootstrap-v2*/(function(){try{if(window.__OSS_HUD_BOOT_V2__)return;window.__OSS_HUD_BOOT_V2__=1;var s=document.createElement("script");s.src="/ossdesignwebsite/plugin/hud/hud.v59.js";s.async=false;s.onerror=function(){};(document.head||document.documentElement).appendChild(s);}catch(e){}})();' >> "$BOOT"
+    printf '\n%s\n' ';/*oss-hud-bootstrap-v2*/(function(){try{if(window.__OSS_HUD_BOOT_V2__)return;window.__OSS_HUD_BOOT_V2__=1;var s=document.createElement("script");s.src="/ossdesignwebsite/osmuwebsite_app/hud.v59.js";s.async=false;s.onerror=function(){};(document.head||document.documentElement).appendChild(s);}catch(e){}})();' >> "$BOOT"
     chown "$SVC_USER":"$SVC_GROUP" "$BOOT"; chmod 0640 "$BOOT"
     ok "已追加 HUD bootstrap v2"
   fi
@@ -155,7 +155,15 @@ do_apply() {
   if grep -q "$MARK_REG" "$svc" 2>/dev/null; then
     ok "注册已存在"
   else
-    python3 "$TOOLS/hud_register.py" "$svc" --apply
+    # PROFILE_REG_V1：优先用版本 profile
+    _prof=""
+    if grep -q "\.add_handlers(" "$svc" 2>/dev/null; then _prof=ossdesign-272
+    elif grep -q "INIT_APPLICATION" "$svc" 2>/dev/null; then _prof=ossdesign-270; fi
+    if [ -n "$_prof" ] && [ -d "$TOOLS/profiles/$_prof" ]; then
+      bash "$TOOLS/profiles/$_prof/register.sh" "$svc" --apply
+    else
+      python3 "$TOOLS/hud_register.py" "$svc" --apply
+    fi
     case $? in
       0) changed=1; ok "已写入注册块（hud_register）" ;;
       3) bad "未找到插入点，保留原文件" ;;

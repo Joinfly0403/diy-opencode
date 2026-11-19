@@ -34,6 +34,8 @@ ROUTES = {
     "login/start": ("POST", "/login/start"),
     "login/status": ("GET", "/login/status"),
     "login/cancel": ("POST", "/login/cancel"),
+    "login/reset": ("POST", "/login/reset"),
+    "login/active": ("GET", "/login/active"),
     "logout": ("POST", "/logout"),
     "sessions": ("GET", "/agent/sessions"),
     "session": ("POST", "/agent/session"),
