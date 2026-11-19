@@ -82,6 +82,35 @@ fi
 [ -d "$TOOLS" ] && ok "$TOOLS" || warn "$TOOLS 不存在（首次安装会创建）"
 systemctl is-active --quiet cogagent-hud-broker 2>/dev/null && ok "broker active" || warn "broker 未运行"
 
+# ---- 完整性/兼容性检查（COMPAT_CHECK_V1）----
+BOOT_FILE="$APP_ROOT/webapps/ossdesignwebsite/osmuwebsite_app/app_main.js"
+HUD_DIR_CHK="$APP_ROOT/webapps/ossdesignwebsite/plugin/hud"
+PROXY_CHK="$APP_ROOT/pyscript/ossdesign/interface/hud_proxy.py"
+SVC_CHK="$APP_ROOT/pyscript/ossdiyservice.py"
+
+say ""
+say "== 安装完整性 =="
+BOOT_MARK=0; REG_CNT=0; HUD_CNT=0; PROXY_SIZE=0
+[ -f "$BOOT_FILE" ] && BOOT_MARK=$(grep -c "oss-hud-bootstrap-v2" "$BOOT_FILE" 2>/dev/null || echo 0)
+[ -f "$SVC_CHK" ] && REG_CNT=$(grep -c "HUD_BRIDGE_V3" "$SVC_CHK" 2>/dev/null || echo 0)
+[ -d "$HUD_DIR_CHK" ] && HUD_CNT=$(ls -1 "$HUD_DIR_CHK"/hud*.js 2>/dev/null | wc -l | tr -d ' ')
+[ -f "$PROXY_CHK" ] && PROXY_SIZE=$(stat -c%s "$PROXY_CHK" 2>/dev/null || echo 0)
+
+[ "$PROXY_SIZE" -gt 0 ] && ok "桥文件（$PROXY_SIZE 字节）" || warn "桥文件缺失（需要安装）"
+[ "$REG_CNT" -gt 0 ] && ok "注册块 HUD_BRIDGE_V3（$REG_CNT 处）" || warn "注册块缺失（需要安装）"
+[ "$HUD_CNT" -gt 0 ] && ok "前端文件（$HUD_CNT 个）" || warn "前端文件缺失（需要安装）"
+
+if [ "$BOOT_MARK" -gt 0 ]; then
+  CUR_HUD=$(grep -o "plugin/hud/hud[^\"]*" "$BOOT_FILE" 2>/dev/null | head -1)
+  ok "bootstrap 已注入（指向 ${CUR_HUD:-?}）"
+else
+  warn "检测到 OSSDesign 升级或未安装：app_main.js 里没有 bootstrap 标记"
+  say "       → 运行 bash install-all.sh 自动补齐（幂等，不会重复添加）"
+fi
+
+systemctl is-active --quiet cogagent-hud-broker 2>/dev/null && ok "broker active" || warn "broker 未运行"
+curl -s --noproxy '*' -o /dev/null -w '' --max-time 3 http://127.0.0.1:18765/status 2>/dev/null && ok "broker /status 可达" || warn "broker /status 不可达"
+
 if [ "$CHECK" = "1" ]; then
   say ""
   say "== 检查模式结束（未做任何修改）=="
