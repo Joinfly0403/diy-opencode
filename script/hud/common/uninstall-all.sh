@@ -57,7 +57,8 @@ echo "  已删除"
 if [ -n "${APP_ROOT:-}" ] && [ -d "${APP_ROOT:-}" ]; then
   echo
   echo "== 3) 前端 =="
-  rm -rf "${APP_ROOT:-}/webapps/ossdesignwebsite/osmuwebsite_app"
+  rm -f "${APP_ROOT:-}/webapps/ossdesignwebsite/osmuwebsite_app"/hud*.js   # UNINSTALL_V3
+  rm -rf "${APP_ROOT:-}/webapps/ossdesignwebsite/plugin/hud" 2>/dev/null || true
   echo "  已删除 plugin/hud/"
 
   echo
@@ -95,14 +96,24 @@ p = sys.argv[1]
 s = open(p, encoding="utf-8").read()
 if "HUD_BRIDGE_V3" not in s and "HUD_BRIDGE_V6" not in s:
     print("  没有注册块（跳过）"); raise SystemExit(0)
+
 start = s.find("    # HUD_BRIDGE_V3")
-if start < 0:
-    print("  标记位置异常（跳过）"); raise SystemExit(0)
 endmark = 'print("[hud] bridge disabled:", _hud_exc)'
-end = s.find(endmark, start)
-if end < 0:
-    print("  块结束标记未找到（跳过）"); raise SystemExit(0)
-end = s.find("\n", end) + 1
+if start >= 0:
+    end = s.find(endmark, start)
+    if end < 0:
+        print("  V3 块结尾异常（跳过）"); raise SystemExit(0)
+    end = s.find("\n", end) + 1
+else:
+    start = s.find("# HUD_BRIDGE_V6")
+    if start < 0:
+        print("  标记异常（跳过）"); raise SystemExit(0)
+    # V6 块以顶格的 _hud_install_bridge() 调用结束（前面还有 def 行）
+    m = s.find("\n_hud_install_bridge()", start)
+    if m < 0:
+        print("  V6 块结尾异常（跳过）"); raise SystemExit(0)
+    end = s.find("\n", m + 1) + 1
+
 shutil.copy2(p, p + ".bak." + time.strftime("%Y%m%d%H%M%S"))
 open(p, "w", encoding="utf-8").write(s[:start] + s[end:])
 print("  已移除注册块")
