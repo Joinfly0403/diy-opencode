@@ -1821,11 +1821,19 @@
 
   var recLastClick = null;   // CHOOSE_REC_V1
 
-  function recIsOption(el) {
-    if (!el || !el.className) return false;
-    var cn = el.className.toString();
-    return /eui_popup_option|select_option|dropdown_item|menu_item/i.test(cn)
-      || !!(el.closest && el.closest("[id^='eui_popup_']"));
+  function recIsOption(el) {   // OPTION_DETECT_V2
+    var n = el, depth = 0;
+    while (n && n.nodeType === 1 && n !== document.body && depth++ < 5) {
+      var cn = (n.className || "") + "";
+      if (/option|dropdown_item|menu_item|select_item/i.test(cn)) return true;
+      var role = n.getAttribute && n.getAttribute("role");
+      if (role === "option" || role === "menuitem") return true;
+      if (n.closest && n.closest("[id^='eui_popup_'],.eui_select_popup,.eui_popup_container,[class*=dropdown],[class*=PopUp]")) {
+        if (/option|item/i.test(cn)) return true;
+      }
+      n = n.parentElement;
+    }
+    return false;
   }
 
   function onRecClick(ev) {
@@ -1950,6 +1958,32 @@
   // ===== /MACRO_RECORD_V2 =====
 
 
+
+  var macroPinCache = {};   // PIN_CLIENT_V1
+  var macroPins = {};
+
+  function macroPinFor(t) {
+    var base = (t && (t.testId || t.text || t.label || t.selector)) || "";
+    return macroPins[String(base).slice(0, 120)] || null;
+  }
+
+  function macroSig(t, extra) {
+    var base = (t && (t.testId || t.text || t.label || t.selector)) || "";
+    return String(base).slice(0, 120) + (extra ? "::" + extra : "");
+  }
+
+  function macroPinGet(sig) {
+    if (macroPinCache[sig] !== undefined) return Promise.resolve(macroPinCache[sig]);
+    return api("/macro/pin?sig=" + encodeURIComponent(sig)).then(function (d) {
+      macroPinCache[sig] = (d && d.pin) || null;
+      return macroPinCache[sig];
+    }).catch(function () { return null; });
+  }
+
+  function macroPinSet(sig, pin) {
+    macroPinCache[sig] = pin;
+    return api("/macro/pin/set", { method: "POST", body: { sig: sig, pin: pin } }).catch(function () {});
+  }
 
   function macroReport(cmd, step, ok, extra) {
     var b = { sessionID: state.active, id: cmd.runId, runId: cmd.runId, step: step, ok: ok };
@@ -2164,6 +2198,11 @@
     return new Promise(function (resolve) {
       (function tick() {
         if (typeof annotateSoon === "function") annotateSoon();   // ANNOTATE_V1
+        var pinHit = macroPinFor(t);
+        if (pinHit && pinHit.testId) {
+          var pe = document.querySelector('[data-hud-id="' + String(pinHit.testId).replace(/"/g, '\\"') + '"]');
+          if (pe && macroVisible(pe)) { resolve(pe); return; }
+        }
         var el = macroResolve(t);
         if (el) { resolve(el); return; }
         if (Date.now() > until) {
@@ -2278,6 +2317,7 @@
     var outputs = {};
 
     macroToast("开始执行：" + (macro.name || macro.id) + "（" + steps.length + " 步）", true);
+    api("/macro/pin").then(function (d) { macroPins = (d && d.pins) || {}; }).catch(function () {});   // PIN_CLIENT_V1
 
     function finish(ok, cur, step, ms, extra) {
       macroRunning = false;
@@ -2332,21 +2372,27 @@
             if (String(cand.value) === String(want)) { written = cand; break; }
           }
           if (!written) throw new Error("找不到可写入的输入框 " + desc + "（候选 " + list.length + "）");
+          var wtid = written.getAttribute && written.getAttribute("data-hud-id");
+          if (wtid) macroPinSet(macroSig(step.target), { testId: wtid });   // PIN_CLIENT_V1
           done();
         }));
         return;
       }
-      if (step.action === "choose") {   // CHOOSE_V1：一次完成"打开下拉 + 选中选项"
-        guard(macroResolveRecover(step.target, 4000).then(function (el) {
-          if (!el) {
-            if (step.optional) { done({ action: "choose", skipped: true, ms: Date.now() - t0 }); return; }
-            throw new Error("找不到下拉框 " + JSON.stringify(step.target || {}));
+      if (step.action === "choose") {   // CHOOSE_V2：候选逐个试探 + 选项校验
+        guard(macroResolveRecover(step.target, 3000).then(function (el) {
+          var triggers = macroCandidates(step.target);
+          if (el) triggers.unshift(el);
+          var uniq = [];
+          for (var ti = 0; ti < triggers.length; ti++) {
+            if (triggers[ti] && uniq.indexOf(triggers[ti]) < 0) uniq.push(triggers[ti]);
           }
-          var triggers = macroCandidates(step.target);   // SELF_TRY_CHOOSE_V1
-          triggers.unshift(el);
+          if (!uniq.length) {
+            if (step.optional) { done({ action: "choose", skipped: true, ms: Date.now() - t0 }); return; }
+            throw new Error("找不到下拉框 " + JSON.stringify(step.target || {}) + "（候选 0）");
+          }
           function tryOne(i) {
-            if (i >= triggers.length) return Promise.reject(new Error("下拉选项未出现：" + step.option));
-            var trig = triggers[i];
+            if (i >= uniq.length) return Promise.reject(new Error("下拉选项未出现：" + step.option + "（试过 " + uniq.length + " 个触发器）"));
+            var trig = uniq[i];
             try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (err) {}
             macroClick(trig);
             return macroWait({ text: step.option }, 2500).then(function () {
@@ -2354,7 +2400,9 @@
                      || macroByText(step.option);
               if (!opt) { macroPress(document.body, "Escape"); return tryOne(i + 1); }
               macroClick(opt);
-              done({ action: "choose", option: step.option, ms: Date.now() - t0 });
+              var ttid = trig.getAttribute && trig.getAttribute("data-hud-id");
+              if (ttid) macroPinSet(macroSig(step.target), { testId: ttid, option: step.option });   // PIN_CLIENT_V1
+              done({ action: "choose", option: step.option, trigger: i, ms: Date.now() - t0 });
             });
           }
           return tryOne(0);

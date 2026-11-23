@@ -349,6 +349,23 @@ class Handler(BaseHTTPRequestHandler):
         with MACRO_LOCK:
             return MACRO_WEBUSER.get(info["account"], info["account"])
 
+    def _pins_path(self):
+        return os.path.join(self.state_dir, "pins.json")
+
+    def _load_pins(self):
+        try:
+            with open(self._pins_path(), encoding="utf-8") as fh:
+                return json.load(fh)
+        except (OSError, ValueError):
+            return {}
+
+    def _save_pins(self, data):
+        os.makedirs(self.state_dir, mode=0o750, exist_ok=True)
+        tmp = self._pins_path() + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, ensure_ascii=False, indent=1)
+        os.replace(tmp, self._pins_path())
+
     def macro_ready(self):
         if MACRO_STORE is None:
             self.send_json(503, {"error": "macro_unavailable", "detail": "macro_store 未加载"})
@@ -420,6 +437,18 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json(404 if exc.code == "macro_not_found" else 403, {"error": exc.code, "detail": exc.detail})
                 return
             self.send_json(200, {"macro": macro})
+            return
+        if path == "/agent/macro/pin" and self.macro_ready():   # PIN_V1
+            owner = self.require_owner()
+            if not owner:
+                return
+            sig = (parse_qs(parsed.query).get("sig") or [""])[0]
+            data = self._load_pins()
+            mine = data.get(owner) or {}
+            if not sig:
+                self.send_json(200, {"pins": mine})
+                return
+            self.send_json(200, {"sig": sig, "pin": mine.get(sig)})
             return
         if path == "/agent/macro/runs" and self.macro_ready():
             owner = self.require_owner()
@@ -518,6 +547,27 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json(200 if done else 504, {"runId": rec["runId"], "done": done, "run": final})
                 return
             self.send_json(200, {"runId": rec["runId"], "accepted": True})
+            return
+        if path == "/agent/macro/pin" and self.macro_ready():   # PIN_V1
+            owner = self.require_owner()
+            if not owner:
+                return
+            body = self.body()
+            sig = (body.get("sig") or "").strip()
+            if not sig:
+                self.send_json(400, {"error": "sig_required"})
+                return
+            data = self._load_pins()
+            mine = data.setdefault(owner, {})
+            pin = body.get("pin")
+            if pin is None:
+                mine.pop(sig, None)
+            else:
+                pin["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+                mine[sig] = pin
+            data[owner] = mine
+            self._save_pins(data)
+            self.send_json(200, {"ok": True, "sig": sig})
             return
         if path == "/agent/macro/cancel" and self.macro_ready():   # CANCEL_V1
             owner = self.require_owner()
