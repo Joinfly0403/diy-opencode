@@ -1850,16 +1850,15 @@
     });
     renderRecCount();
     if (!recSteps.length) { showToast("没有录到任何操作"); return; }
-    recSteps = recSteps.map(function (x) {   // NAME_TS_V2：合法命名（字母数字_-），_短时间戳，总长≤32
+    recSteps = recSteps.map(function (x) {   // NAME_TS_V3：仅"项目名称/站点名称"自动追加 _时间戳
       if (x.action !== "fill" || !x.value) return x;
       var lab = (x.target && (x.target.label || "")) || "";
-      if (!/名称/.test(lab)) return x;
+      if (!/项目名称|站点名称/.test(lab)) return x;
       var raw = String(x.value);
       if (raw.indexOf("{{") >= 0) return x;
-      var base = raw.replace(/[^A-Za-z0-9_-]/g, "");
-      if (!base) base = /站点/.test(lab) ? "site" : "prj";
-      base = base.slice(0, 16);
-      x.value = base + "_{{shortstamp}}";
+      var suffix = "_{{shortstamp}}";        // 展开后是 _ + yyMMddHHmm（11 字符）
+      var maxBase = 32 - 11;                  // 保证总长 ≤ 32
+      x.value = raw.slice(0, maxBase) + suffix;
       return x;
     });
 
