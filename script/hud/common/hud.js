@@ -1519,12 +1519,13 @@
     try { return document.querySelectorAll(sel).length === 1; } catch (e) { return false; }
   }
 
-  function recClickable(e) {
+  function recClickable(e) {   // REC_TARGET_V3
     var n = e;
     while (n && n.nodeType === 1) {
       var tag = (n.tagName || "").toLowerCase();
       if (tag === "button" || tag === "a" || n.getAttribute("role") === "button") return n;
-      if (/btn|button|textButton|select_item|menu/i.test(n.className && n.className.toString ? n.className.toString() : "")) return n;
+      var cn = n.className && n.className.toString ? n.className.toString() : "";
+      if (/btn|Button|textButton|select_item|menu_item|menuItem|dropdown_item/i.test(cn)) return n;
       n = n.parentElement;
     }
     return e;
@@ -1544,6 +1545,18 @@
     if (txt && txt.length <= 40) t.text = txt;
     var id = n.getAttribute && n.getAttribute("id");
     if (id && recUnique("#" + id)) t.selector = "#" + id;
+    if (!t.selector && !t.text) {   // ANCHOR_V1
+      var anc = n.parentElement;
+      while (anc && anc !== document.body) {
+        if (anc.id) {
+          var own = (n.tagName || "").toLowerCase();
+          var ocn = n.className && n.className.toString ? n.className.toString().trim().split(/\s+/).filter(Boolean)[0] : "";
+          t.selector = "#" + anc.id + " " + own + (ocn && /^[A-Za-z][A-Za-z0-9_-]*$/.test(ocn) ? "." + ocn : "");
+          break;
+        }
+        anc = anc.parentElement;
+      }
+    }
     var cls = n.className && n.className.toString ? n.className.toString().trim().split(/\s+/).filter(Boolean)[0] : "";
     if (!t.selector && cls && /^[A-Za-z][A-Za-z0-9_-]*$/.test(cls) && recUnique("." + cls)) t.class = cls;
     var r = recScope(n);
@@ -1699,14 +1712,23 @@
 
   function macroNorm(t) { return (t || "").replace(/\s+/g, " ").trim(); }
 
-  function macroByText(text, cls) {
-    var roots = [];
-    var scoped = cls ? document.querySelector(cls) : null;
-    if (scoped) roots.push(scoped);
-    roots.push(document);
-    for (var ri = 0; ri < roots.length; ri++) {
-      var hit = macroByTextIn(macroNorm(text), roots[ri]);
-      if (hit) return hit;
+  function macroByText(text, cls) {   // TEXT_SPLIT_V1
+    var norm = macroNorm(text);
+    var candidates = [norm];
+    if (norm.indexOf(" ") > 0) {
+      var parts = norm.split(" ").filter(function (x) { return x.length >= 2; });
+      parts.sort(function (a, b) { return b.length - a.length; });
+      for (var pi = 0; pi < parts.length; pi++) candidates.push(parts[pi]);
+    }
+    for (var ci = 0; ci < candidates.length; ci++) {
+      var roots = [];
+      var scoped = cls ? document.querySelector(cls) : null;
+      if (scoped) roots.push(scoped);
+      roots.push(document);
+      for (var ri = 0; ri < roots.length; ri++) {
+        var hit = macroByTextIn(candidates[ci], roots[ri]);
+        if (hit) return hit;
+      }
     }
     return null;
   }
@@ -1756,7 +1778,9 @@
   function macroResolve(t) {
     if (!t) return null;
     if (t.class) { var c = document.querySelector("." + t.class); if (c) return c; }
-    if (t.selector) { var q = document.querySelector(t.selector); if (q) return q; }
+    if (t.selector && !/^#eui_(popup|row|tree_node_id\w*)_?\d+$/.test(t.selector)) {   // SKIP_DYNAMIC_ID_V1
+      var q = document.querySelector(t.selector); if (q) return q;
+    }
     if (t.label) {
       var labels = document.querySelectorAll("label,.el-form-item__label,.ant-form-item-label,.eui-form-label-required,[class*=form-label]");
       for (var i = 0; i < labels.length; i++) {
