@@ -22,7 +22,7 @@ bad() { printf '[FAIL] %s\n' "$*"; }
 SVC_USER=ossadm; id "$SVC_USER" >/dev/null 2>&1 || SVC_USER=root
 SVC_GROUP=$(id -gn "$SVC_USER")
 
-for f in broker.py hud_proxy.py hud.js recover.sh hud_register.py; do
+for f in broker.py hud_proxy.py hud.js recover.sh hud_register.py macro_store.py; do
   [ -f "$SRC/$f" ] || { bad "缺失文件: $SRC/$f"; exit 1; }
 done
 
@@ -64,6 +64,7 @@ install -d -m 0750 "$TOOLS"
 install -m 0750 "$SRC/broker.py"       "$TOOLS/broker.py"
 install -m 0750 "$SRC/recover.sh"      "$TOOLS/recover.sh"
 install -m 0750 "$SRC/hud_register.py" "$TOOLS/hud_register.py"
+install -m 0750 "$SRC/macro_store.py" "$TOOLS/macro_store.py"
 python3 -c "import py_compile;py_compile.compile('$TOOLS/broker.py', cfile='/tmp/broker.pyc', doraise=True)"
 ok "已安装"
 

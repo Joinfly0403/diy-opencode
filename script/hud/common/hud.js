@@ -1462,6 +1462,272 @@
     });
   })();
 
+  // ===== MACRO_V1：动作工具栏 + 页面执行器（UI 优先）=====
+  var macroBar = el("div", "macrobar");
+  macroBar.style.cssText = "display:flex;gap:6px;align-items:center;overflow-x:auto;padding:6px 8px;border-bottom:1px solid #e8ecf3;background:#fbfcfe;flex:0 0 auto";
+  if (hd.nextSibling) panel.insertBefore(macroBar, hd.nextSibling); else panel.appendChild(macroBar);
+
+  var macroRunning = false;
+  var macroPollTimer = null;
+
+  function macroToast(msg, ok) {
+    if (ok) showToast(msg, "ok"); else showToast(msg);
+  }
+
+  function loadMacros() {
+    api("/macro/list").then(function (d) {
+      var list = (d && d.macros) || [];
+      macroBar.innerHTML = "";
+      if (!list.length) return;
+      list.slice(0, 12).forEach(function (m) {
+        var b = el("button", "btn", m.name || m.id);
+        b.title = (m.description || "") + "（v" + m.version + (m.owner ? " · " + m.owner : "") + "）";
+        b.style.cssText = "flex:0 0 auto;font-size:11px;padding:2px 8px";
+        b.onclick = function () { runMacroById(m.id); };
+        macroBar.appendChild(b);
+      });
+      if (list.length > 12) {
+        var more = el("button", "btn", "⋯ " + (list.length - 12));
+        more.style.cssText = "flex:0 0 auto;font-size:11px;padding:2px 8px";
+        more.onclick = function () { showToast("还有 " + (list.length - 12) + " 个动作（列表功能开发中）"); };
+        macroBar.appendChild(more);
+      }
+    }).catch(function () {});
+  }
+
+  function runMacroById(id) {
+    if (macroRunning) { macroToast("已有动作在执行"); return; }
+    api("/macro/run", { method: "POST", body: { id: id, trigger: "user", sessionID: state.active } })
+      .then(function (d) { macroToast("已开始执行：" + id + "（" + (d.runId || "") + "）", true); })
+      .catch(function (e) { macroToast("执行失败：" + String(e.message || e)); });
+  }
+
+  function macroReport(cmd, step, ok, extra) {
+    var b = { sessionID: state.active, id: cmd.runId, runId: cmd.runId, step: step, ok: ok };
+    if (extra) { for (var k in extra) b[k] = extra[k]; }
+    return api("/macro/result", { method: "POST", body: b }).catch(function () {});
+  }
+
+  function macroVisible(e) {
+    if (!e) return false;
+    var r = e.getBoundingClientRect();
+    var st = getComputedStyle(e);
+    return r.width > 0 && r.height > 0 && st.visibility !== "hidden" && st.display !== "none";
+  }
+
+  function macroByText(text, cls) {
+    var root = cls ? document.querySelector(cls) : document;
+    if (!root) return null;
+    var nodes = root.querySelectorAll("button,a,span,div,li,td,label");
+    var best = null, bestArea = Infinity;
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (!macroVisible(n)) continue;
+      var t = (n.innerText || n.textContent || "").trim();
+      if (t !== text && t.indexOf(text) < 0) continue;
+      var r = n.getBoundingClientRect();
+      var area = r.width * r.height;
+      if (area > 0 && area < bestArea) { best = n; bestArea = area; }
+    }
+    return best;
+  }
+
+  function macroResolve(t) {
+    if (!t) return null;
+    if (t.class) { var c = document.querySelector("." + t.class); if (c) return c; }
+    if (t.selector) { var q = document.querySelector(t.selector); if (q) return q; }
+    if (t.label) {
+      var labels = document.querySelectorAll("label,.el-form-item__label,.ant-form-item-label");
+      for (var i = 0; i < labels.length; i++) {
+        if ((labels[i].innerText || "").trim().indexOf(t.label) >= 0) {
+          var f = labels[i].getAttribute("for");
+          if (f) { var el2 = document.getElementById(f); if (el2) return el2; }
+          var p = labels[i].parentElement;
+          if (p) { var inp = p.querySelector("input,textarea,select"); if (inp) return inp; }
+        }
+      }
+    }
+    if (t.placeholder) { var ph = document.querySelector('[placeholder="' + t.placeholder + '"]'); if (ph) return ph; }
+    if (t.text) return macroByText(t.text, t.scope);
+    return null;
+  }
+
+  function macroHighlight(e) {
+    try {
+      e.style.outline = "2px solid #2F6BFF";
+      e.style.outlineOffset = "2px";
+      setTimeout(function () { e.style.outline = ""; e.style.outlineOffset = ""; }, 500);
+    } catch (err) {}
+  }
+
+  function macroClick(e) {
+    e.scrollIntoView({ block: "center" });
+    macroHighlight(e);
+    var r = e.getBoundingClientRect();
+    var x = r.left + r.width / 2, y = r.top + r.height / 2;
+    ["pointerdown", "mousedown", "pointerup", "mouseup", "click"].forEach(function (type) {
+      var Ev = type.indexOf("pointer") === 0 ? PointerEvent : MouseEvent;
+      try { e.dispatchEvent(new Ev(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, view: window })); } catch (err) {}
+    });
+  }
+
+  function macroFill(e, val) {
+    e.scrollIntoView({ block: "center" });
+    macroHighlight(e);
+    try { e.focus(); } catch (err) {}
+    var proto = e.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    var setter = Object.getOwnPropertyDescriptor(proto, "value").set;
+    setter.call(e, val);
+    e.dispatchEvent(new Event("input", { bubbles: true }));
+    e.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function macroWait(cond, timeout) {
+    var until = Date.now() + (timeout || 10000);
+    return new Promise(function (resolve, reject) {
+      (function tick() {
+        if (Date.now() > until) { reject(new Error("等待超时")); return; }
+        var ok = false;
+        if (cond.text) ok = !!macroByText(cond.text, cond.scope);
+        else if (cond.class) ok = !!document.querySelector("." + cond.class);
+        else if (cond.selector) ok = !!document.querySelector(cond.selector);
+        else if (cond.urlPattern) ok = new RegExp(cond.urlPattern).test(location.href);
+        if (ok) { resolve(true); return; }
+        setTimeout(tick, 300);
+      })();
+    });
+  }
+
+  function macroExpand(v, params) {
+    if (typeof v !== "string") return v;
+    var d = new Date();
+    var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+    var date = "" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate());
+    var time = "" + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+    var out = v
+      .replace(/\{\{date\}\}/g, date)
+      .replace(/\{\{time\}\}/g, time)
+      .replace(/\{\{datetime\}\}/g, date + "-" + time)
+      .replace(/\{\{seq:(\d+)\}\}/g, function (_, n) { return String(params.__seq || 1).padStart(parseInt(n, 10), "0"); })
+      .replace(/\{\{rand:(\d+)\}\}/g, function (_, n) { return Math.random().toString(16).slice(2, 2 + parseInt(n, 10)); });
+    Object.keys(params || {}).forEach(function (k) {
+      out = out.split("{{" + k + "}}").join(String(params[k]));
+    });
+    return out;
+  }
+
+  function macroApiCall(step, params) {
+    var headers = { "Content-Type": "application/json" };
+    if (window.common && window.common.csrfToken) headers["roarand"] = window.common.csrfToken;
+    return fetch(step.endpoint, {
+      method: "POST", credentials: "same-origin", headers: headers,
+      body: JSON.stringify(step.payload || {})
+    }).then(function (r) {
+      return r.text().then(function (t) {
+        if (!r.ok) throw new Error("API " + r.status + ": " + t.slice(0, 200));
+        return t ? JSON.parse(t) : {};
+      });
+    });
+  }
+
+  function execMacro(cmd) {
+    if (macroRunning) return Promise.resolve();
+    macroRunning = true;
+    var macro = cmd.macro || {};
+    var params = cmd.params || {};
+    var steps = macro.steps || [];
+    var outputs = {};
+    var i = 0;
+    macroToast("开始执行：" + (macro.name || macro.id) + "（" + steps.length + " 步）", true);
+
+    function next() {
+      if (i >= steps.length) {
+        macroRunning = false;
+        macroReport(cmd, i, true, { final: true, result: "ok", outputs: outputs, via: "ui" });
+        macroToast("动作完成：" + (macro.name || macro.id), true);
+        return;
+      }
+      var idx = i + 1, step = steps[i++];
+      var t0 = Date.now();
+      var el = (step.action === "click" || step.action === "fill" || step.action === "select" ||
+                step.action === "read" || step.action === "verify") ? macroResolve(step.target) : null;
+
+      var fail = function (msg) {
+        macroRunning = false;
+        macroReport(cmd, idx, false, { action: step.action, ms: Date.now() - t0, error: String(msg), final: true, result: "failed", failedStep: idx });
+        macroToast("第 " + idx + " 步失败：" + msg);
+      };
+
+      try {
+        if (step.action === "click") {
+          if (!el) return fail("找不到元素");
+          macroClick(el);
+        } else if (step.action === "fill") {
+          if (!el) return fail("找不到输入框");
+          macroFill(el, macroExpand(step.value, params));
+        } else if (step.action === "select") {
+          if (!el) return fail("找不到下拉框");
+          var v = macroExpand(step.value, params);
+          el.value = v;
+          el.dispatchEvent(new Event("change", { bubbles: true }));
+        } else if (step.action === "read") {
+          if (!el) return fail("找不到读取目标");
+          outputs[step.as || ("out" + idx)] = (el.innerText || el.value || "").trim().slice(0, 2000);
+        } else if (step.action === "verify") {
+          if (!el) return fail("校验失败：未找到 " + JSON.stringify(step.target));
+        } else if (step.action === "wait") {
+          return macroWait(step.for || {}, step.timeout).then(function () {
+            macroReport(cmd, idx, true, { action: "wait", ms: Date.now() - t0 });
+            setTimeout(next, 300);
+          }).catch(fail);
+        } else if (step.action === "api") {
+          return macroApiCall(step, params).then(function (res) {
+            if (step.as) outputs[step.as] = res;
+            macroReport(cmd, idx, true, { action: "api", ms: Date.now() - t0, via: "api" });
+            setTimeout(next, 300);
+          }).catch(fail);
+        } else if (step.action === "sleep") {
+          return setTimeout(next, step.ms || 300);
+        } else if (step.action === "refresh") {
+          return macroWait(step.wait || {}, step.wait && step.wait.timeout).then(function () {
+            macroReport(cmd, idx, true, { action: "refresh", ms: Date.now() - t0 });
+            setTimeout(next, 300);
+          }).catch(fail);
+        } else {
+          return fail("暂不支持的 action: " + step.action);
+        }
+      } catch (err) {
+        return fail(err && err.message ? err.message : err);
+      }
+
+      macroReport(cmd, idx, true, { action: step.action, ms: Date.now() - t0 });
+      setTimeout(next, 300);
+    }
+    next();
+    return Promise.resolve();
+  }
+
+  function macroPoll() {
+    if (!state.handle || macroRunning) return;
+    api("/macro/pending").then(function (d) {
+      var cmds = (d && d.commands) || [];
+      cmds.forEach(function (cmd) { execMacro(cmd); });
+    }).catch(function () {});
+  }
+
+  function macroStart() {
+    if (macroPollTimer) return;
+    loadMacros();
+    macroPollTimer = setInterval(macroPoll, 1500);
+  }
+
+  window.__hudMacro = {
+    run: runMacroById,
+    exec: function (macroJson, params) { return execMacro({ runId: "debug-" + Date.now(), macro: macroJson, params: params || {} }); },
+    list: function () { return api("/macro/list"); }
+  };
+  // ===== /MACRO_V1 =====
+
   var saved = load();
   state.handle = saved.handle || null;
   state.account = saved.account || "";
@@ -1470,7 +1736,7 @@
     setStatus("wait", "连接中…");
     api("/sessions").then(function () {
       setStatus("ok", state.account ? state.account + " 已连接" : "已连接");
-      loadSessions(); connectSSE();
+      loadSessions(); connectSSE(); macroStart();
     }).catch(function () { resetLogin(); });
   } else {
     setStatus("", "未连接");

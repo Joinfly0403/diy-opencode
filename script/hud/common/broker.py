@@ -15,6 +15,7 @@ import json
 import os
 import re
 import secrets
+import threading  # MACRO_API_V1
 import subprocess
 import sys
 import threading
@@ -33,6 +34,15 @@ LISTEN_RE = re.compile(r"server listening on http://127\.0\.0\.1:(\d+)")
 STATE_LOCK = threading.RLock()
 TICKETS = {}
 HANDLES = {}
+MACRO_RUNS = {}          # runId -> {"record":..., "event": threading.Event()}
+MACRO_PENDING = {}       # account -> [cmd, ...]
+MACRO_LOCK = threading.Lock()
+try:
+    import macro_store
+    MACRO_STORE = None   # 在 Server.__init__ 里初始化
+except Exception:
+    macro_store = None
+    MACRO_STORE = None
 INSTANCES = {}
 
 
@@ -85,6 +95,9 @@ class Server:
         os.makedirs(self.state_dir, exist_ok=True)
         self.handles_path = os.path.join(self.state_dir, "handles.json")
         self._load_handles()
+        global MACRO_STORE
+        if macro_store is not None and MACRO_STORE is None:
+            MACRO_STORE = macro_store.Store(self.state_dir)
 
     def _load_handles(self):
         try:
@@ -315,6 +328,22 @@ class Handler(BaseHTTPRequestHandler):
             return None, None
         return handle, info
 
+    def require_owner(self):
+        acct = (self.headers.get("X-Hud-Account") or "").strip()
+        host = self.client_address[0] if self.client_address else ""
+        if acct and host in ("127.0.0.1", "::1", "::ffff:127.0.0.1"):
+            return acct
+        handle, info = self.require_handle()
+        if not info:
+            return None
+        return info["account"]
+
+    def macro_ready(self):
+        if MACRO_STORE is None:
+            self.send_json(503, {"error": "macro_unavailable", "detail": "macro_store 未加载"})
+            return False
+        return True
+
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
@@ -351,6 +380,130 @@ class Handler(BaseHTTPRequestHandler):
                 if entry.get(key):
                     payload[key] = entry[key]
             self.send_json(200, payload)
+            return
+        if path == "/agent/macro/pending" and self.macro_ready():
+            owner = self.require_owner()
+            if not owner:
+                return
+            with MACRO_LOCK:
+                cmds = MACRO_PENDING.pop(owner, [])
+            self.send_json(200, {"commands": cmds})
+            return
+        if path == "/agent/macro/list" and self.macro_ready():
+            owner = self.require_owner()
+            if not owner:
+                return
+            q = parse_qs(parsed.query)
+            scope = (q.get("scope") or ["all"])[0]
+            query = (q.get("q") or [""])[0]
+            self.send_json(200, {"macros": MACRO_STORE.list(owner, scope, query)})
+            return
+        if path == "/agent/macro/get" and self.macro_ready():
+            owner = self.require_owner()
+            if not owner:
+                return
+            mid = (parse_qs(parsed.query).get("id") or [""])[0]
+            try:
+                macro = MACRO_STORE.get(owner, mid)
+            except macro_store.MacroError as exc:
+                self.send_json(404 if exc.code == "macro_not_found" else 403, {"error": exc.code, "detail": exc.detail})
+                return
+            self.send_json(200, {"macro": macro})
+            return
+        if path == "/agent/macro/runs" and self.macro_ready():
+            owner = self.require_owner()
+            if not owner:
+                return
+            q = parse_qs(parsed.query)
+            mid = (q.get("id") or [None])[0]
+            limit = int((q.get("limit") or ["20"])[0])
+            self.send_json(200, {"runs": MACRO_STORE.list_runs(owner, mid, limit)})
+            return
+        if path == "/agent/macro/save" and self.macro_ready():
+            owner = self.require_owner()
+            if not owner:
+                return
+            body = self.body()
+            try:
+                res = MACRO_STORE.save(owner, body.get("macro") or {}, body.get("mode", "upsert"), actor=owner)
+            except macro_store.MacroError as exc:
+                code = 409 if exc.code == "macro_conflict" else 400
+                self.send_json(code, {"error": exc.code, "detail": exc.detail})
+                return
+            self.send_json(200, res)
+            return
+        if path == "/agent/macro/delete" and self.macro_ready():
+            owner = self.require_owner()
+            if not owner:
+                return
+            body = self.body()
+            try:
+                res = MACRO_STORE.delete(owner, body.get("id") or "", bool(body.get("hard")), actor=owner)
+            except macro_store.MacroError as exc:
+                self.send_json(404 if exc.code == "macro_not_found" else 403, {"error": exc.code})
+                return
+            self.send_json(200, res)
+            return
+        if path == "/agent/macro/run" and self.macro_ready():
+            owner = self.require_owner()
+            if not owner:
+                return
+            body = self.body()
+            mid = body.get("id") or ""
+            try:
+                macro = MACRO_STORE.get(owner, mid)
+            except macro_store.MacroError as exc:
+                self.send_json(404, {"error": exc.code})
+                return
+            with MACRO_LOCK:
+                if any(r.get("owner") == owner and r["record"].get("result") == "running" for r in MACRO_RUNS.values()):
+                    self.send_json(409, {"error": "macro_busy"})
+                    return
+                rec = MACRO_STORE.start_run(owner, mid, macro.get("version", 0), body.get("params") or {}, body.get("trigger", "user"))
+                ev = threading.Event()
+                MACRO_RUNS[rec["runId"]] = {"owner": owner, "record": rec, "event": ev}
+                MACRO_PENDING.setdefault(owner, []).append({
+                    "runId": rec["runId"], "macro": macro, "params": body.get("params") or {},
+                    "count": int(body.get("count", 1)), "sessionID": body.get("sessionID"),
+                    "slowMode": bool(body.get("slowMode", True)),
+                    "deadline": time.time() + int(body.get("timeout", 120)),
+                })
+            if body.get("wait"):
+                done = ev.wait(timeout=int(body.get("timeout", 120)))
+                final = MACRO_RUNS[rec["runId"]]["record"]
+                self.send_json(200 if done else 504, {"runId": rec["runId"], "done": done, "run": final})
+                return
+            self.send_json(200, {"runId": rec["runId"], "accepted": True})
+            return
+        if path == "/agent/macro/result" and self.macro_ready():
+            owner = self.require_owner()
+            if not owner:
+                return
+            body = self.body()
+            rid = body.get("runId") or ""
+            with MACRO_LOCK:
+                entry = MACRO_RUNS.get(rid)
+            if not entry:
+                self.send_json(404, {"error": "run_not_found"})
+                return
+            rec = entry["record"]
+            if body.get("step") is not None:
+                rec.setdefault("steps", []).append({
+                    "index": body.get("step"), "action": body.get("action"),
+                    "ok": bool(body.get("ok")), "ms": body.get("ms"),
+                    "via": body.get("via", "ui"), "error": body.get("error"),
+                })
+            if body.get("outputs"):
+                rec.setdefault("outputs", {}).update(body["outputs"])
+            if body.get("via") == "api":
+                rec["fallbackUsed"] = True
+            if body.get("final"):
+                rec["result"] = body.get("result", "ok")
+                rec["failedStep"] = body.get("failedStep")
+                rec["endedAt"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+                MACRO_STORE.append_run(owner, rec)
+                entry["event"].set()
+            self.send_json(200, {"ok": True})
             return
         if path.startswith("/agent/"):
             handle, info = self.require_handle()

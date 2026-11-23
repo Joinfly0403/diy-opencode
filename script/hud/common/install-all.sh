@@ -65,7 +65,7 @@ FAIL=0
 command -v python3 >/dev/null && ok "python3" || { bad "缺 python3"; FAIL=1; }
 command -v systemctl >/dev/null && ok "systemd" || { bad "缺 systemd"; FAIL=1; }
 command -v node >/dev/null && ok "node" || warn "没有 node（跳过前端语法检查）"
-for f in broker.py hud_proxy.py hud.js recover.sh deploy.sh hud_register.py; do
+for f in broker.py hud_proxy.py hud.js recover.sh deploy.sh hud_register.py macro_store.py; do
   [ -f "$SRC/$f" ] || { bad "缺失: $f"; FAIL=1; }
 done
 [ "$FAIL" = "0" ] && ok "部署文件齐全"
