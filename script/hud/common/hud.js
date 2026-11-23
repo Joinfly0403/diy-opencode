@@ -232,17 +232,45 @@
     perm: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b6478" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 20 5.6v5.6c0 4.9-3.3 9-8 10.3-4.7-1.3-8-5.4-8-10.3V5.6z"/><circle cx="12" cy="11" r="2.2"/><path d="M14.9 11h1.3M12 8.1V6.8M9.1 11H7.8M12 13.9v1.3M14.05 8.95l.92-.92M9.95 8.95l-.92-.92M9.95 13.05l-.92.92M14.05 13.05l.92.92"/></svg>'
   };
 
-  function iconDataUri(svg) {   // ICON_DATAURI_V1
-    return 'url("data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '")';
+  function iconSrc(svg) {   // ICON_IMG_V1：data URI + <img>，最稳的渲染方式
+    var b64 = "";
+    try { b64 = btoa(unescape(encodeURIComponent(svg))); } catch (e) { b64 = ""; }
+    return "data:image/svg+xml;base64," + b64;
+  }
+
+  function iconNode(svg) {   // ICON_DOM_V1：用 DOM 解析 SVG，避开 CSP / innerHTML 限制
+    try {
+      var doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+      var node = doc && doc.documentElement;
+      if (node && String(node.tagName).toLowerCase() === "svg") {
+        node.setAttribute("width", "16");
+        node.setAttribute("height", "16");
+        node.style.width = "16px";
+        node.style.height = "16px";
+        node.style.display = "block";
+        return document.importNode ? document.importNode(node, true) : node;
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function iconImg(svg) {
+    var node = iconNode(svg);
+    if (node) return node;
+    var img = document.createElement("img");   // 兜底
+    img.width = 16; img.height = 16;
+    img.alt = "";
+    img.style.cssText = "width:16px;height:16px;display:block;pointer-events:none";
+    img.src = iconSrc(svg);
+    return img;
   }
 
   function iconPicker(sel, icon, label) {
     var wrap = el("div");
     wrap.style.cssText = "position:relative;display:inline-flex";
     var btn = el("button", "btn", "");
-    btn.style.cssText = "padding:0;width:28px;height:22px;line-height:0;display:inline-flex;align-items:center;justify-content:center;"
-      + "background-repeat:no-repeat;background-position:center;background-size:16px 16px";
-    btn.style.backgroundImage = iconDataUri(icon);
+    btn.style.cssText = "padding:1px 6px;line-height:0;display:inline-flex;align-items:center;justify-content:center";
+    btn.appendChild(iconImg(icon));
     btn.setAttribute("aria-label", label);
     btn.dataset.icon = icon;
     btn.title = label + "：" + (sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "");
@@ -292,12 +320,14 @@
       w.__btn.title = w.__label + "：" + txt;
       if (w === agentPick) {
         var svgAgent = sel.value === "plan" ? HUD_SVG.user : HUD_SVG.dev;
-        w.__btn.style.backgroundImage = iconDataUri(svgAgent);
-        w.__btn.dataset.icon = svgAgent;
+        if (w.__btn.dataset.icon !== svgAgent) {
+          w.__btn.dataset.icon = svgAgent;
+          w.__btn.innerHTML = "";
+          w.__btn.appendChild(iconImg(svgAgent));
+        }
       }
       if (w === permPick) {
-        w.__btn.style.backgroundImage = iconDataUri(HUD_SVG.perm);
-        w.__btn.style.opacity = sel.value === "bypass" ? "1" : "0.75";
+        w.__btn.style.opacity = sel.value === "bypass" ? "1" : "0.7";
       }
     });
   }
