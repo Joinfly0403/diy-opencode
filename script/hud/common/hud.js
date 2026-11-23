@@ -98,7 +98,7 @@
     ".composer textarea{flex:1;resize:none;min-height:34px;max-height:120px;padding:8px;border:1px solid #d8dde5;",
     "border-radius:8px;font:inherit;outline:none}",
     ".empty{padding:16px;color:#7a828e;font-size:12px}",
-    ".toast{position:absolute;left:12px;right:12px;bottom:64px;background:#ffeaea;color:#a12626;",
+    ".toast{position:absolute;left:12px;right:12px;bottom:64px;background:#ffeaea;color:#a12626;z-index:20000;",
     "border:1px solid #f3c2c2;border-radius:8px;padding:6px 10px;font-size:12px;display:none}",
     ".toast.ok{background:#e8f0ff;color:#1e40af;border-color:#bfdbfe}", // TOAST_V26
     ".connect{padding:22px;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;",
@@ -228,7 +228,7 @@
     btn.title = label + "：" + (sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "");
     var pop = el("div");
     pop.style.cssText = "display:none;position:absolute;bottom:110%;left:0;min-width:150px;max-height:220px;overflow:auto;"
-      + "background:#fff;border:1px solid #dfe4ea;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:4px;z-index:10";
+      + "background:#fff;border:1px solid #dfe4ea;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:4px;z-index:5";
     function refresh() {
       pop.innerHTML = "";
       for (var i = 0; i < sel.options.length; i++) {
@@ -322,8 +322,8 @@
       sideBtn.title = h ? "显示会话列表" : "隐藏会话列表";
       chev.textContent = h ? "›" : "‹";
       // 收起时：留出 6px 给左边缘缩放，缝加宽到 14px 并显示浅色，便于识别与点击
-      divider.style.flexBasis = h ? "14px" : "7px";
-      divider.style.marginLeft = h ? "6px" : "0";
+      divider.style.flexBasis = h ? "7px" : "7px";
+      divider.style.marginLeft = "0";
       divider.style.background = h ? "#eef1f6" : "transparent";
       divider.style.borderLeft = h ? "1px solid #e3e8f0" : "none";
     }
