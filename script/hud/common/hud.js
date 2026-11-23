@@ -1509,11 +1509,21 @@
       .catch(function (e) { showToast("删除失败：" + String(e.message || e)); });
   }
 
-  function runMacroById(id) {
+  function runMacroById(id, retried) {   // BUSY_RETRY_V1
     if (macroRunning) { macroToast("已有动作在执行"); return; }
     api("/macro/run", { method: "POST", body: { id: id, trigger: "user", sessionID: state.active } })
       .then(function (d) { macroToast("已开始执行：" + id + "（" + (d.runId || "") + "）", true); })
-      .catch(function (e) { macroToast("执行失败：" + String(e.message || e)); });
+      .catch(function (e) {
+        var msg = String(e.message || e);
+        if (!retried && msg.indexOf("macro_busy") >= 0) {
+          macroToast("检测到残留执行，正在释放…", "ok");
+          api("/macro/cancel", { method: "POST", body: {} })
+            .then(function () { runMacroById(id, true); })
+            .catch(function () { macroToast("执行失败：" + msg); });
+          return;
+        }
+        macroToast("执行失败：" + msg);
+      });
   }
 
   // ===== ANNOTATE_V1：运行时稳定标识（只加内存属性，刷新即消失）=====

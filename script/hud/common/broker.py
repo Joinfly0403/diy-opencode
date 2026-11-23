@@ -477,12 +477,35 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json(404, {"error": exc.code})
                 return
             with MACRO_LOCK:
+                now = time.time()
+                for rid0, r0 in list(MACRO_RUNS.items()):   # STALE_RUN_V1：页面刷新/断线后自动释放
+                    rec0 = r0.get("record") or {}
+                    if rec0.get("result") != "running":
+                        continue
+                    touched = r0.get("touched") or r0.get("started") or now
+                    if now - touched < 60:   # STALE_RUN_V1
+                        continue
+                    rec0["result"] = "failed"
+                    rec0["failedStep"] = None
+                    rec0["endedAt"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+                    rec0["stale"] = True
+                    try:
+                        MACRO_STORE.append_run(owner, rec0)
+                    except Exception:
+                        pass
+                    try:
+                        r0["event"].set()
+                    except Exception:
+                        pass
+                    MACRO_RUNS.pop(rid0, None)
+                    log("macro run stale released: %s" % rid0)
                 if any(r.get("owner") == owner and r["record"].get("result") == "running" for r in MACRO_RUNS.values()):
                     self.send_json(409, {"error": "macro_busy"})
                     return
                 rec = MACRO_STORE.start_run(owner, mid, macro.get("version", 0), body.get("params") or {}, body.get("trigger", "user"))
                 ev = threading.Event()
-                MACRO_RUNS[rec["runId"]] = {"owner": owner, "record": rec, "event": ev}
+                MACRO_RUNS[rec["runId"]] = {"owner": owner, "record": rec, "event": ev,
+                                            "started": time.time(), "touched": time.time()}
                 MACRO_PENDING.setdefault(owner, []).append({
                     "runId": rec["runId"], "macro": macro, "params": body.get("params") or {},
                     "count": int(body.get("count", 1)), "sessionID": body.get("sessionID"),
@@ -496,6 +519,36 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self.send_json(200, {"runId": rec["runId"], "accepted": True})
             return
+        if path == "/agent/macro/cancel" and self.macro_ready():   # CANCEL_V1
+            owner = self.require_owner()
+            if not owner:
+                return
+            body = self.body() if self.command == "POST" else {}
+            rid = body.get("runId") or ""
+            released = []
+            with MACRO_LOCK:
+                for k, r in list(MACRO_RUNS.items()):
+                    if r.get("owner") != owner:
+                        continue
+                    if rid and k != rid:
+                        continue
+                    rec = r.get("record") or {}
+                    if rec.get("result") == "running":
+                        rec["result"] = "cancelled"
+                        rec["endedAt"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+                        try:
+                            MACRO_STORE.append_run(owner, rec)
+                        except Exception:
+                            pass
+                    try:
+                        r["event"].set()
+                    except Exception:
+                        pass
+                    MACRO_RUNS.pop(k, None)
+                    released.append(k)
+                MACRO_PENDING.pop(owner, None)
+            self.send_json(200, {"cancelled": released})
+            return
         if path == "/agent/macro/result" and self.macro_ready():
             owner = self.require_owner()
             if not owner:
@@ -508,6 +561,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json(404, {"error": "run_not_found"})
                 return
             rec = entry["record"]
+            entry["touched"] = time.time()   # STALE_RUN_V1
             if body.get("step") is not None:
                 rec.setdefault("steps", []).append({
                     "index": body.get("step"), "action": body.get("action"),

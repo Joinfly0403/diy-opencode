@@ -44,6 +44,8 @@ ROUTES = {
     "macro/result": ("POST", "/agent/macro/result"),
     "macro/pending": ("GET", "/agent/macro/pending"),
     "macro/runs": ("GET", "/agent/macro/runs"),
+    "macro/whoami": ("GET", "/agent/macro/whoami"),
+    "macro/cancel": ("POST", "/agent/macro/cancel"),
     "logout": ("POST", "/logout"),
     "sessions": ("GET", "/agent/sessions"),
     "session": ("POST", "/agent/session"),
