@@ -419,6 +419,9 @@ class Handler(BaseHTTPRequestHandler):
             limit = int((q.get("limit") or ["20"])[0])
             self.send_json(200, {"runs": MACRO_STORE.list_runs(owner, mid, limit)})
             return
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
         if path == "/agent/macro/save" and self.macro_ready():
             owner = self.require_owner()
             if not owner:
@@ -505,17 +508,7 @@ class Handler(BaseHTTPRequestHandler):
                 entry["event"].set()
             self.send_json(200, {"ok": True})
             return
-        if path.startswith("/agent/"):
-            handle, info = self.require_handle()
-            if not info:
-                return
-            self.proxy(path, info, parsed)
-            return
-        self.send_json(404, {"error": "not_found"})
 
-    def do_POST(self):
-        parsed = urlparse(self.path)
-        path = parsed.path
         if path == "/login/start":
             ticket, error = self.app.start_login()
             if error:
