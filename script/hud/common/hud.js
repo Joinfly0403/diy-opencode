@@ -1776,8 +1776,8 @@
 
   function recFieldTarget(e) {
     var t = recTarget(e);
-    var fld = hudFieldName(e) || hudAncestorField(e);   // FIELD_AT_RECORD_V1
-    if (fld) t.testId = "field=" + fld + "|input";
+    var fld = hudFieldName(e) || hudAncestorField(e);   // FIELD_AT_RECORD_V2
+    if (fld && !(t.testId && t.testId.indexOf("field=") === 0)) t.testId = "field=" + fld + "|input";
     var lab = hudFieldLabel(e);   // FIELD_HINT_V1
     if (lab) t.label = lab;
     var ph = e.getAttribute && e.getAttribute("placeholder");
@@ -2033,6 +2033,16 @@
         var k = parseInt(m[2], 10) - 1;
         if (list[k]) return list[k];
       }
+      // TESTID_PREFIX_V1：field=project_name|input 命中 field=project_name|input|cls=xxx
+      var pref = rawId.replace(/"/g, '\\"');
+      var prefHits = [];
+      var prefAll = document.querySelectorAll("[data-hud-id]");
+      for (var pi2 = 0; pi2 < prefAll.length; pi2++) {
+        var pv = prefAll[pi2].getAttribute("data-hud-id") || "";
+        if (pv.indexOf(rawId + "|") === 0 && macroVisible(prefAll[pi2])) prefHits.push(prefAll[pi2]);
+      }
+      if (prefHits.length === 1) return prefHits[0];
+
       // TESTID_SUFFIX_V1：去掉动态上下文，用尾部语义段模糊匹配
       var segs = rawId.split("|").filter(function (x) { return x.indexOf("in=") !== 0 && !/^\w+=\d+/.test(x); });
       var suffix = segs.slice(-2).join("|");
