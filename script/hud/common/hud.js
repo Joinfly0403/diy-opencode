@@ -115,6 +115,10 @@
     "height:100%;text-align:center;color:#4b5563}"
   ].join("");
 
+  var HUD_BUILD = "2026-11-23T20:10";   // HUD_BUILD：用于确认浏览器加载的是哪一版
+  try { window.__hudBuild = HUD_BUILD; } catch (e) {}
+  console.log("[hud] build " + HUD_BUILD);
+
   var state = { handle: null, account: "", sessions: [], active: null, msgs: {}, msgsSig: {}, conn: "idle", ticket: null, models: [], query: "" }; // STATE_MODELS_V24
 
   var host = document.createElement("div");
