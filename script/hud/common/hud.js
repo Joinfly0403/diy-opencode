@@ -1489,6 +1489,8 @@
         b.title = (m.description || "") + "（v" + m.version + (m.owner ? " · " + m.owner : "") + "）";
         b.style.cssText = "flex:0 0 auto;font-size:11px;padding:2px 8px";
         b.onclick = function () { runMacroById(m.id); };
+        b.oncontextmenu = function (ev) { ev.preventDefault(); deleteMacro(m.id); };
+        b.title = b.title + "（右键删除）";
         macroList.appendChild(b);
       });
       if (list.length > 12) {
@@ -1498,6 +1500,13 @@
         macroList.appendChild(more);
       }
     }).catch(function () {});
+  }
+
+  function deleteMacro(id) {   // MACRO_DEL_V1
+    if (!window.confirm("删除动作「" + id + "」？（可在审计日志里追溯）")) return;
+    api("/macro/delete", { method: "POST", body: { id: id } })
+      .then(function () { showToast("已删除：" + id, "ok"); loadMacros(); })
+      .catch(function (e) { showToast("删除失败：" + String(e.message || e)); });
   }
 
   function runMacroById(id) {
@@ -1817,6 +1826,15 @@
     });
     renderRecCount();
     if (!recSteps.length) { showToast("没有录到任何操作"); return; }
+    recSteps = recSteps.map(function (x) {   // NAME_TS_V1：项目/站点名称追加 _{时间戳}
+      if (x.action !== "fill" || !x.value) return x;
+      var lab = (x.target && (x.target.label || "")) || "";
+      if (!/名称/.test(lab)) return x;
+      if (String(x.value).indexOf("{{") >= 0) return x;
+      x.value = String(x.value) + "_{{datetime}}";
+      return x;
+    });
+
     var preview = recSteps.map(function (x, i) {
       return (i + 1) + ". " + x.action + " " + JSON.stringify(x.target || {}) + (x.value ? " = " + x.value : "");
     }).join("\n");
