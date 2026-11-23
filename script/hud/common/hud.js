@@ -1564,7 +1564,7 @@
     if (el.closest && el.closest("[id^='eui_popup_']")) parts.push("popup");
     if (!treeA && el.parentElement) {
       var anc = el.parentElement.closest("[id]");
-      if (anc && anc !== el) parts.push("in=" + String(anc.id).slice(0, 24));
+      if (anc && anc !== el && !/\d/.test(String(anc.id))) parts.push("in=" + String(anc.id).slice(0, 24));
     }
     parts.push(hudKind(el));
     var nm = hudName(el);
@@ -1706,7 +1706,11 @@
 
   function recFieldTarget(e) {
     var t = recTarget(e);
-    if (t.selector || t.class || t.placeholder) return t;
+    var lab = hudFieldLabel(e);   // FIELD_HINT_V1
+    if (lab) t.label = lab;
+    var ph = e.getAttribute && e.getAttribute("placeholder");
+    if (ph && !t.placeholder) t.placeholder = String(ph).slice(0, 20);
+    if (t.testId || t.selector || t.class || t.label || t.placeholder) return t;
     var box = e.closest ? e.closest(".eui-form_item,[class*=form_item],[class*=formItem],tr,li,div") : null;
     if (box) {
       var lab = box.querySelector("label,[class*=form-label],[class*=formLabel]");
@@ -1905,6 +1909,17 @@
         var list = document.querySelectorAll('[data-hud-id^="' + pre + '|i="]');
         var k = parseInt(m[2], 10) - 1;
         if (list[k]) return list[k];
+      }
+      // TESTID_SUFFIX_V1：去掉动态上下文，用尾部语义段模糊匹配
+      var segs = rawId.split("|").filter(function (x) { return x.indexOf("in=") !== 0 && !/^\w+=\d+/.test(x); });
+      var suffix = segs.slice(-2).join("|");
+      if (suffix) {
+        var all = document.querySelectorAll("[data-hud-id]");
+        var hits = [];
+        for (var hi = 0; hi < all.length; hi++) {
+          if ((all[hi].getAttribute("data-hud-id") || "").slice(-suffix.length) === suffix && macroVisible(all[hi])) hits.push(all[hi]);
+        }
+        if (hits.length === 1) return hits[0];
       }
     }
     if (t.class) { var c = document.querySelector("." + t.class); if (c) return c; }
