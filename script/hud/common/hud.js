@@ -2132,7 +2132,13 @@
 
   function recApiSteps() {
     var steps = [];
-    var rows = recNet.filter(function (r) { return /\/rest\/ossdesign\/v1\/designer\//.test(r.url || "") && r.method !== "OPTIONS"; });
+    var rows = recNet.filter(function (r) {
+      var u = r.url || "";
+      if (!/\/rest\/ossdesign\/v1\/designer\//.test(u)) return false;
+      if (/\/designer\/hud\//.test(u)) return false;   // REC_NET_SKIP_HUD_V1：排除 HUD 自身轮询
+      if (r.method === "OPTIONS") return false;
+      return true;
+    });
     rows.forEach(function (r) {
       var m = String(r.url).match(/\/rest\/ossdesign\/v1\/designer\/([^?#]+)(\?[^#]*)?/);
       if (!m) return;
@@ -2910,6 +2916,10 @@
         guard(macroWait(step.for || {}, step.timeout).then(function () {
           done({ action: "wait", ms: Date.now() - t0 });
         }));
+        return;
+      }
+      if (step.action === "api" && step.endpoint && step.endpoint.indexOf("/hud/") >= 0) {
+        done({ action: "api", skipped: true, endpoint: step.endpoint, ms: Date.now() - t0 });   // SKIP_HUD_STEP_V1
         return;
       }
       if (step.action === "api") {   // API_V3：记录入参 body + 响应
