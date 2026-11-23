@@ -1529,6 +1529,7 @@
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   });
   minBtn.onclick = function () { panel.style.display = "none"; };
+  ball.title = "单击打开面板 · 双击恢复默认大小和位置";   // BALL_HINT_V1
   ball.onclick = function () {
     panel.style.display = "flex";
     if (!state.handle) renderConnect();
