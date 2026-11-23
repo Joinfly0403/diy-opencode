@@ -2107,6 +2107,58 @@
     });
   }
 
+  function macroCandidates(t) {   // SELF_TRY_V1：精确失败后按语义收集候选
+    var out = [];
+    function add(el) {
+      if (!el || el.nodeType !== 1) return;
+      if (out.indexOf(el) >= 0) return;
+      if (!macroVisible(el)) return;
+      out.push(el);
+    }
+    if (t.testId) {
+      var raw = String(t.testId);
+      var all = document.querySelectorAll("[data-hud-id]");
+      for (var i = 0; i < all.length; i++) {
+        var v = all[i].getAttribute("data-hud-id") || "";
+        if (v === raw || v.indexOf(raw + "|") === 0 || (raw.indexOf("|i=") > 0 && v.indexOf(raw.split("|i=")[0] + "|i=") === 0)) add(all[i]);
+      }
+    }
+    if (t.class) {
+      var byClass = document.querySelectorAll("." + t.class);
+      for (var c = 0; c < byClass.length && c < 8; c++) add(byClass[c]);
+    }
+    if (t.label) {
+      var labs = document.querySelectorAll("label,[class*=form-label],[class*=formLabel]");
+      for (var l = 0; l < labs.length; l++) {
+        if ((labs[l].innerText || "").trim().indexOf(t.label) < 0) continue;
+        var box = labs[l].closest("[class*=form],[class*=item],div");
+        if (!box) continue;
+        var ins = box.querySelectorAll("input,textarea,select");
+        for (var k = 0; k < ins.length; k++) add(ins[k]);
+      }
+    }
+    if (t.placeholder) {
+      var byPh = document.querySelectorAll('[placeholder="' + t.placeholder + '"]');
+      for (var ph = 0; ph < byPh.length; ph++) add(byPh[ph]);
+    }
+    if (t.text) {
+      var txt = macroNorm(t.text);
+      var nodes = document.querySelectorAll("button,a,span,div,li,[role=button],[role=option],[role=menuitem]");
+      for (var n = 0; n < nodes.length; n++) {
+        var nt = macroNorm(nodes[n].innerText || nodes[n].textContent || "");
+        if (nt === txt) add(nodes[n]);
+      }
+      if (!out.length && txt.indexOf(" ") > 0) {
+        var parts = txt.split(" ");
+        for (var q = 0; q < nodes.length && out.length < 6; q++) {
+          var qt = macroNorm(nodes[q].innerText || "");
+          if (qt && parts.some(function (pp) { return qt === pp; })) add(nodes[q]);
+        }
+      }
+    }
+    return out.slice(0, 8);
+  }
+
   function macroResolveWait(t, timeout) {   // MACRO_RESOLVE_WAIT_V1
     var until = Date.now() + (timeout || 3000);
     return new Promise(function (resolve) {
@@ -2114,7 +2166,11 @@
         if (typeof annotateSoon === "function") annotateSoon();   // ANNOTATE_V1
         var el = macroResolve(t);
         if (el) { resolve(el); return; }
-        if (Date.now() > until) { resolve(null); return; }
+        if (Date.now() > until) {
+          var cands = macroCandidates(t);   // SELF_TRY_V1：自动试探
+          if (cands.length) { resolve(cands[0]); return; }
+          resolve(null); return;
+        }
         setTimeout(tick, 150);
       })();
     });
@@ -2260,10 +2316,23 @@
         }));
         return;
       }
-      if (step.action === "fill") {
-        guard(macroResolveRecover(step.target, 4000).then(function (el) {
-          if (!el) throw new Error("找不到输入框 " + desc);
-          macroFill(el, macroExpand(step.value, params)); done();
+      if (step.action === "fill") {   // SELF_TRY_FILL_V1：多个候选逐个写入并校验
+        guard(macroResolveRecover(step.target, 4000).then(function () {
+          var want = macroExpand(step.value, params);
+          var list = macroCandidates(step.target);
+          var direct = macroResolve(step.target);
+          if (direct) list.unshift(direct);
+          var written = null;
+          for (var fi = 0; fi < list.length; fi++) {
+            var cand = list[fi];
+            if (!cand || cand.nodeType !== 1) continue;
+            var tag = (cand.tagName || "").toLowerCase();
+            if (tag !== "input" && tag !== "textarea" && tag !== "select") continue;
+            try { macroFill(cand, want); } catch (e) { continue; }
+            if (String(cand.value) === String(want)) { written = cand; break; }
+          }
+          if (!written) throw new Error("找不到可写入的输入框 " + desc + "（候选 " + list.length + "）");
+          done();
         }));
         return;
       }
@@ -2273,15 +2342,22 @@
             if (step.optional) { done({ action: "choose", skipped: true, ms: Date.now() - t0 }); return; }
             throw new Error("找不到下拉框 " + JSON.stringify(step.target || {}));
           }
-          try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (err) {}
-          macroClick(el);
-          return macroWait({ text: step.option }, step.timeout || 6000).then(function () {
-            var opt = macroByText(step.option, ".eui-dialog-box,[class*=popup],[class*=dropdown],[class*=select]")
-                   || macroByText(step.option);
-            if (!opt) throw new Error("下拉选项未出现：" + step.option);
-            macroClick(opt);
-            done({ action: "choose", option: step.option, ms: Date.now() - t0 });
-          });
+          var triggers = macroCandidates(step.target);   // SELF_TRY_CHOOSE_V1
+          triggers.unshift(el);
+          function tryOne(i) {
+            if (i >= triggers.length) return Promise.reject(new Error("下拉选项未出现：" + step.option));
+            var trig = triggers[i];
+            try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (err) {}
+            macroClick(trig);
+            return macroWait({ text: step.option }, 2500).then(function () {
+              var opt = macroByText(step.option, ".eui-dialog-box,[class*=popup],[class*=dropdown],[class*=select]")
+                     || macroByText(step.option);
+              if (!opt) { macroPress(document.body, "Escape"); return tryOne(i + 1); }
+              macroClick(opt);
+              done({ action: "choose", option: step.option, ms: Date.now() - t0 });
+            });
+          }
+          return tryOne(0);
         }));
         return;
       }
