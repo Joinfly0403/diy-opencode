@@ -575,6 +575,8 @@ class Handler(BaseHTTPRequestHandler):
                 return
             body = self.body() if self.command == "POST" else {}
             rid = body.get("runId") or ""
+            note = body.get("note") or "unspecified"
+            log("macro cancel requested: note=%s runId=%s" % (note, rid or "-"))
             released = []
             with MACRO_LOCK:
                 for k, r in list(MACRO_RUNS.items()):
@@ -585,6 +587,7 @@ class Handler(BaseHTTPRequestHandler):
                     rec = r.get("record") or {}
                     if rec.get("result") == "running":
                         rec["result"] = "cancelled"
+                        rec["cancelNote"] = note
                         rec["endedAt"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
                         try:
                             MACRO_STORE.append_run(owner, rec)

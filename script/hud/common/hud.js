@@ -1690,17 +1690,16 @@
       .catch(function (e) { showToast("删除失败：" + String(e.message || e)); });
   }
 
-  function runMacroById(id, retried) {   // BUSY_RETRY_V1
+  function runMacroById(id, waitCount) {   // BUSY_WAIT_V2：不取消正在跑的动作，改为等待
     if (macroRunning) { macroToast("已有动作在执行"); return; }
+    var tries = waitCount || 0;
     api("/macro/run", { method: "POST", body: { id: id, trigger: "user", sessionID: state.active } })
       .then(function (d) { macroToast("已开始执行：" + id + "（" + (d.runId || "") + "）", true); })
       .catch(function (e) {
         var msg = String(e.message || e);
-        if (!retried && msg.indexOf("macro_busy") >= 0) {
-          macroToast("检测到残留执行，正在释放…", "ok");
-          api("/macro/cancel", { method: "POST", body: {} })
-            .then(function () { runMacroById(id, true); })
-            .catch(function () { macroToast("执行失败：" + msg); });
+        if (msg.indexOf("macro_busy") >= 0 && tries < 15) {
+          setMacroStatus("上一轮仍在执行，等待中…（" + (tries + 1) + "/15）");
+          setTimeout(function () { runMacroById(id, tries + 1); }, 2000);
           return;
         }
         macroToast("执行失败：" + msg);
@@ -1898,7 +1897,7 @@
   var macroCancelBtn = el("button", "btn", "■ 停止执行");
   macroCancelBtn.style.cssText = "display:none;flex:0 0 auto;font-size:11px;padding:2px 8px";
   macroCancelBtn.onclick = function () {
-    api("/macro/cancel", { method: "POST", body: {} }).catch(function () {});
+    api("/macro/cancel", { method: "POST", body: { note: "user-stop" } }).catch(function () {});
     macroToast("已请求停止", "ok");
     macroRunning = false;
     setMacroStatus("已停止");
