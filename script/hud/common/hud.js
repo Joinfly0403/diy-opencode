@@ -1547,6 +1547,19 @@
     return "";
   }
 
+  function hudAncestorField(el) {   // FIELD_FROM_CONTAINER_V1
+    var n = el.parentElement, depth = 0;
+    while (n && n !== document.body && depth++ < 12) {
+      var a = n.getAttribute && n.getAttribute("data-hud-id");
+      if (a && a.indexOf("field=") === 0) {
+        var m = a.match(/^field=([^|]+)/);
+        if (m) return m[1];
+      }
+      n = n.parentElement;
+    }
+    return "";
+  }
+
   function hudTestType(el) {
     var n = el, depth = 0;
     while (n && n.nodeType === 1 && depth++ < 4) {
@@ -1603,7 +1616,7 @@
 
   function hudIdFor(el) {
     var parts = [];
-    var __field = hudFieldName(el);
+    var __field = hudFieldName(el) || hudAncestorField(el);
     if (__field) parts.push("field=" + __field);
     var __tt = hudTestType(el);
     if (__tt) parts.push("tt=" + __tt);
