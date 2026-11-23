@@ -1710,6 +1710,24 @@
   // ===== /ANNOTATE_V1 =====
 
   // ===== MACRO_RECORD_V2：页面内录制（文本优先 + 作用域 + 顺序正确）=====
+  var macroStatus = el("span", "macrostatus", "");   // STATUS_BAR_V1
+  macroStatus.style.cssText = "flex:0 0 auto;font-size:11px;color:#5b6478;white-space:nowrap;padding:0 6px";
+  macroBar.appendChild(macroStatus);
+
+  var macroCancelBtn = el("button", "btn", "■ 停止执行");
+  macroCancelBtn.style.cssText = "display:none;flex:0 0 auto;font-size:11px;padding:2px 8px";
+  macroCancelBtn.onclick = function () {
+    api("/macro/cancel", { method: "POST", body: {} }).catch(function () {});
+    macroToast("已请求停止", "ok");
+    macroRunning = false;
+    setMacroStatus("已停止");
+  };
+  macroBar.appendChild(macroCancelBtn);
+
+  function setMacroStatus(text) {
+    macroStatus.textContent = text || "";
+  }
+
   var recSteps = [], recording = false, pendingFill = [];
 
   var recBtn = el("button", "btn", "● 录制");
@@ -1889,6 +1907,49 @@
     };
   }
 
+  function recLeaves(obj, prefix, out, depth) {   // CORRELATE_V1
+    if (depth > 4 || obj === null || obj === undefined) return;
+    if (typeof obj !== "object") { if (prefix) out.push([prefix, obj]); return; }
+    if (Array.isArray(obj)) { obj.forEach(function (v, i) { recLeaves(v, prefix + "[" + i + "]", out, depth + 1); }); return; }
+    Object.keys(obj).forEach(function (k) { recLeaves(obj[k], prefix ? (prefix + "." + k) : k, out, depth + 1); });
+  }
+
+  function recReplaceExact(v, target, repl) {
+    if (typeof v === "string") return v === target ? repl : v;
+    if (Array.isArray(v)) return v.map(function (x) { return recReplaceExact(x, target, repl); });
+    if (v && typeof v === "object") {
+      var o = {};
+      Object.keys(v).forEach(function (k) { o[k] = recReplaceExact(v[k], target, repl); });
+      return o;
+    }
+    return v;
+  }
+
+  function recCorrelate(steps) {
+    var resps = steps.map(function (st) {
+      try { return JSON.parse(st.__resp || "null"); } catch (e) { return null; }
+    });
+    steps.forEach(function (st, k) { st.as = "s" + (k + 1); delete st.__resp; });
+    for (var k = 1; k < steps.length; k++) {
+      for (var i = 0; i < k; i++) {
+        var resp = resps[i];
+        if (!resp || typeof resp !== "object") continue;
+        var leaves = [];
+        recLeaves(resp, "", leaves, 0);
+        for (var li = 0; li < leaves.length; li++) {
+          var path = leaves[li][0], val = leaves[li][1];
+          if (typeof val !== "string" && typeof val !== "number") continue;
+          var str = String(val);
+          if (str.length < 3) continue;
+          var ph = "{{s" + (i + 1) + "." + path + "}}";
+          if (steps[k].payload) steps[k].payload = recReplaceExact(steps[k].payload, str, ph);
+          if (steps[k].query) steps[k].query = recReplaceExact(steps[k].query, str, ph);
+        }
+      }
+    }
+    return steps;
+  }
+
   function recApiSteps() {
     var steps = [];
     var rows = recNet.filter(function (r) { return /\/rest\/ossdesign\/v1\/designer\//.test(r.url || "") && r.method !== "OPTIONS"; });
@@ -1912,6 +1973,7 @@
         try { step.payload = JSON.parse(r.body); } catch (e) { step.payload = r.body; }
       }
       if (r.roarand) step.headers = { roarand: r.roarand };
+      step.__resp = r.resp || "";
       steps.push(step);
     });
     return steps;
@@ -2001,6 +2063,13 @@
 
   function renderRecCount() {
     recBtn.textContent = recording ? ("■ 停止(" + recSteps.length + ")") : "● 录制";
+    if (recording) {
+      var n = 0;
+      try { n = recNet.length; } catch (e) { n = 0; }
+      setMacroStatus("录制中 · UI " + recSteps.length + " 步 · 抓包 " + n + " 条");   // STATUS_BAR_V1
+    } else {
+      setMacroStatus("");
+    }
   }
 
   var recHandlers = null;
@@ -2044,6 +2113,7 @@
     var apiSteps = [];
     try { apiSteps = recApiSteps(); } catch (err) { apiSteps = []; }
     if (apiSteps.length) {   // REC_NET_V1：有接口流量就保存接口动作
+      apiSteps = recCorrelate(apiSteps);   // CORRELATE_V1：把上一步响应里的 id 变成占位符
       apiSteps.forEach(function (st) {
         var pl = st.payload;
         if (pl && typeof pl === "object" && !Array.isArray(pl)) {
@@ -2475,7 +2545,10 @@
       return r.text().then(function (t) {
         var body = t;
         try { body = t ? JSON.parse(t) : {}; } catch (e) { body = t; }
-        if (!r.ok) throw new Error("API " + method + " " + step.endpoint + " -> " + r.status + ": " + String(t).slice(0, 200));
+        if (!r.ok) {
+          var snippet = String(t).replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
+          throw new Error("API " + method + " " + step.endpoint + " -> " + r.status + ": " + (snippet || "(空响应)"));
+        }
         return body;
       });
     });
@@ -2490,10 +2563,14 @@
     var outputs = {};
 
     macroToast("开始执行：" + (macro.name || macro.id) + "（" + steps.length + " 步）", true);
+    macroCancelBtn.style.display = "";
+    setMacroStatus("执行中 0/" + steps.length);   // STATUS_BAR_V1
     api("/macro/pin").then(function (d) { macroPins = (d && d.pins) || {}; }).catch(function () {});   // PIN_CLIENT_V1
 
     function finish(ok, cur, step, ms, extra) {
       macroRunning = false;
+      macroCancelBtn.style.display = "none";
+      setMacroStatus(ok ? "完成 " + cur + " 步" : ("失败于第 " + cur + " 步"));   // STATUS_BAR_V1
       var body = { action: step ? step.action : "done", ms: ms, final: true, result: ok ? "ok" : "failed" };
       if (extra) { for (var k in extra) body[k] = extra[k]; }
       if (!ok) body.failedStep = cur;
@@ -2506,6 +2583,7 @@
       if (i >= steps.length) { finish(true, i, null, 0, { outputs: outputs, via: "ui" }); return; }
       var cur = i + 1;
       var step = steps[i];
+      setMacroStatus("执行中 " + cur + "/" + steps.length + " · " + (step.action || "") + " " + ((step.endpoint || (step.target && (step.target.testId || step.target.text)) || "") + "").slice(0, 40));   // STATUS_BAR_V1
       try { if (typeof annotateNow === "function") annotateNow(); } catch (err) {}   // ANNOTATE_SYNC_V1
       var t0 = Date.now();
       var desc = JSON.stringify(step.target || {});
