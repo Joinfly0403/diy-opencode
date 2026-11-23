@@ -1507,19 +1507,57 @@
       .catch(function (e) { macroToast("执行失败：" + String(e.message || e)); });
   }
 
-  // ===== MACRO_RECORD_V1：页面内录制 =====
-  var recSteps = [], recording = false;
+  // ===== MACRO_RECORD_V2：页面内录制（文本优先 + 作用域 + 顺序正确）=====
+  var recSteps = [], recording = false, pendingFill = [];
 
   var recBtn = el("button", "btn", "● 录制");
   recBtn.style.cssText = "flex:0 0 auto;font-size:11px;padding:2px 8px;white-space:nowrap";
   recBtn.onclick = function () { if (recording) stopRecord(); else startRecord(); };
   macroBar.appendChild(recBtn);
 
-  function cssPath(e) {
+  function recUnique(sel) {
+    try { return document.querySelectorAll(sel).length === 1; } catch (e) { return false; }
+  }
+
+  function recClickable(e) {
+    var n = e;
+    while (n && n.nodeType === 1) {
+      var tag = (n.tagName || "").toLowerCase();
+      if (tag === "button" || tag === "a" || n.getAttribute("role") === "button") return n;
+      if (/btn|button|textButton|select_item|menu/i.test(n.className && n.className.toString ? n.className.toString() : "")) return n;
+      n = n.parentElement;
+    }
+    return e;
+  }
+
+  function recScope(e) {
+    var d = e.closest ? e.closest(".eui-dialog-box,[class*=dialog],[class*=Dialog],[class*=drawer],[class*=Drawer]") : null;
+    if (!d) return null;
+    if (d.classList && d.classList.contains("eui-dialog-box")) return ".eui-dialog-box";
+    return null;
+  }
+
+  function recTarget(e) {
+    var n = recClickable(e);
+    var t = {};
+    var txt = (n.innerText || n.textContent || "").trim().replace(/\s+/g, " ");
+    if (txt && txt.length <= 40) t.text = txt;
+    var id = n.getAttribute && n.getAttribute("id");
+    if (id && recUnique("#" + id)) t.selector = "#" + id;
+    var cls = n.className && n.className.toString ? n.className.toString().trim().split(/\s+/).filter(Boolean)[0] : "";
+    if (!t.selector && cls && /^[A-Za-z][A-Za-z0-9_-]*$/.test(cls) && recUnique("." + cls)) t.class = cls;
+    var r = recScope(n);
+    if (r) t.scope = r;
+    var ph = n.getAttribute && (n.getAttribute("placeholder") || n.getAttribute("aria-label"));
+    if (!t.text && ph) t.placeholder = ph;
+    return t;
+  }
+
+  function recCssPath(e) {   // REC_FIELD_V1：最后的兜底选择器
     if (!e || !e.tagName) return "";
     if (e.id) return "#" + e.id;
     var parts = [], node = e, depth = 0;
-    while (node && node.nodeType === 1 && depth < 4) {
+    while (node && node.nodeType === 1 && depth < 5) {
       var sel = node.tagName.toLowerCase();
       var parent = node.parentElement;
       if (parent) {
@@ -1530,20 +1568,39 @@
         if (same > 1) sel += ":nth-of-type(" + idx + ")";
       }
       parts.unshift(sel);
+      if (node.id) break;
       node = parent; depth++;
     }
     return parts.join(" > ");
   }
 
-  function recTarget(e) {
-    var t = { selector: cssPath(e) };
-    var txt = (e.innerText || e.textContent || "").trim();
-    if (txt && txt.length <= 20) t.text = txt;
+  function recFieldTarget(e) {
+    var t = recTarget(e);
+    if (t.selector || t.class || t.placeholder) return t;
+    var box = e.closest ? e.closest(".eui-form_item,[class*=form_item],[class*=formItem],tr,li,div") : null;
+    if (box) {
+      var lab = box.querySelector("label,[class*=form-label],[class*=formLabel]");
+      var lt = lab ? (lab.innerText || "").trim() : "";
+      if (lt && lt.length <= 20) { t.label = lt.replace(/[:：]$/, "").trim(); return t; }
+    }
+    var ph = e.getAttribute && e.getAttribute("placeholder");
+    if (ph) { t.placeholder = ph; return t; }
+    t.selector = recCssPath(e);
     return t;
   }
 
-  function recNormalize(step) {   // 录制时把值转成参数占位
-    return step;
+  function recFlushFill() {
+    while (pendingFill.length) {
+      var item = pendingFill.shift();
+      recSteps.push({ action: "fill", target: item.target, value: item.value });
+    }
+  }
+
+  function recPush(step) {
+    var last = recSteps[recSteps.length - 1];
+    if (last && last.action === step.action && JSON.stringify(last.target) === JSON.stringify(step.target)
+        && last.action !== "fill") return;
+    recSteps.push(step);
   }
 
   function onRecClick(ev) {
@@ -1552,8 +1609,26 @@
     if (!e || (e.closest && e.closest('[id^="cogagent-hud-host"]'))) return;
     var tag = (e.tagName || "").toLowerCase();
     if (tag === "input" || tag === "textarea" || tag === "select") return;
-    recSteps.push({ action: "click", target: recTarget(e) });
-    recSteps.push({ action: "sleep", ms: 400 });
+    recFlushFill();
+    recPush({ action: "click", target: recTarget(e) });
+    recSteps.push({ action: "sleep", ms: 350 });
+    renderRecCount();
+  }
+
+  function recDirty(el) {
+    for (var i = 0; i < pendingFill.length; i++) if (pendingFill[i].el === el) return i;
+    return -1;
+  }
+
+  function onRecInput(ev) {
+    if (!recording) return;
+    var e = ev.target;
+    if (!e || !e.tagName) return;
+    var tag = e.tagName.toLowerCase();
+    if (tag !== "input" && tag !== "textarea") return;
+    var i = recDirty(e);
+    var item = { el: e, target: recFieldTarget(e), value: e.value };
+    if (i >= 0) pendingFill[i] = item; else pendingFill.push(item);
     renderRecCount();
   }
 
@@ -1561,14 +1636,10 @@
     if (!recording) return;
     var e = ev.target;
     if (!e || !e.tagName) return;
-    var tag = e.tagName.toLowerCase();
-    if (tag === "select") {
-      recSteps.push({ action: "select", target: recTarget(e), value: e.value });
-    } else if (tag === "input" || tag === "textarea") {
-      if (!e.value) return;
-      recSteps.push({ action: "fill", target: recTarget(e), value: e.value });
-      recSteps.push({ action: "sleep", ms: 150 });
-    }
+    if (e.tagName.toLowerCase() !== "select") return;
+    recFlushFill();
+    recPush({ action: "select", target: recFieldTarget(e), value: e.value });
+    recSteps.push({ action: "sleep", ms: 250 });
     renderRecCount();
   }
 
@@ -1576,27 +1647,42 @@
     recBtn.textContent = recording ? ("■ 停止(" + recSteps.length + ")") : "● 录制";
   }
 
+  var recHandlers = null;
+
   function startRecord() {
-    recSteps = []; recording = true; renderRecCount();
+    recSteps = []; pendingFill = []; recording = true; renderRecCount();
+    recHandlers = { click: onRecClick, input: onRecInput, change: onRecChange };
     document.addEventListener("click", onRecClick, true);
+    document.addEventListener("input", onRecInput, true);
     document.addEventListener("change", onRecChange, true);
-    showToast("录制中：在页面上操作，完成后点「■ 停止」", "ok");
+    showToast("录制中：正常操作，完成后点「■ 停止」", "ok");
   }
 
   function stopRecord() {
     recording = false;
+    recFlushFill();
     document.removeEventListener("click", onRecClick, true);
+    document.removeEventListener("input", onRecInput, true);
     document.removeEventListener("change", onRecChange, true);
+    recSteps = recSteps.filter(function (x, i, arr) {
+      return !(x.action === "sleep" && i === arr.length - 1);
+    });
     renderRecCount();
     if (!recSteps.length) { showToast("没有录到任何操作"); return; }
-    var name = window.prompt("动作名称（保存后可在工具栏点击执行）", "录制动作 " + new Date().toLocaleTimeString());
+    var preview = recSteps.map(function (x, i) {
+      return (i + 1) + ". " + x.action + " " + JSON.stringify(x.target || {}) + (x.value ? " = " + x.value : "");
+    }).join("\n");
+    console.log("[录制结果]\n" + preview);
+    var name = window.prompt("动作名称（可在工具栏一键回放；\n录制步骤已打印到 Console）", "录制动作 " + new Date().toLocaleTimeString());
     if (!name) { showToast("已取消保存"); return; }
     var id = "rec-" + Date.now().toString(36);
     api("/macro/save", { method: "POST", body: { mode: "upsert", macro: { id: id, name: name, description: "录制于 " + location.href, steps: recSteps } } })
       .then(function () { showToast("已保存：" + name, "ok"); loadMacros(); })
       .catch(function (e) { showToast("保存失败：" + String(e.message || e)); });
   }
-  // ===== /MACRO_RECORD_V1 =====
+  // ===== /MACRO_RECORD_V2 =====
+
+
 
   function macroReport(cmd, step, ok, extra) {
     var b = { sessionID: state.active, id: cmd.runId, runId: cmd.runId, step: step, ok: ok };
