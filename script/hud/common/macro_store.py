@@ -253,9 +253,35 @@ class Store:
     def append_run(self, owner, record):
         path = os.path.join(self.runs, owner, time.strftime("%Y-%m") + ".jsonl")
         os.makedirs(os.path.dirname(path), mode=0o750, exist_ok=True)
-        line = json.dumps(record, ensure_ascii=False)[:20000]
+        safe = dict(record)
+        steps = []
+        for st in (safe.get("steps") or []):
+            item = dict(st)
+            for key, limit in (("req", 400), ("res", 300), ("error", 300)):
+                if item.get(key) is not None:
+                    item[key] = str(item[key])[:limit]
+            steps.append(item)
+        safe["steps"] = steps[-120:]
+        line = json.dumps(safe, ensure_ascii=False)
+        if len(line) > 120000:
+            safe["steps"] = [{k: v for k, v in st.items() if k not in ("req", "res")} for st in safe["steps"]]
+            line = json.dumps(safe, ensure_ascii=False)
         with open(path, "a", encoding="utf-8") as fh:
             fh.write(line + "\n")
+            fh.flush()
+
+    def append_api(self, owner, record):
+        """每次接口调用单独一行（入参 + 返回值），文件独立，避免撑爆执行记录。"""
+        path = os.path.join(self.runs, owner, time.strftime("%Y-%m") + ".api.jsonl")
+        os.makedirs(os.path.dirname(path), mode=0o750, exist_ok=True)
+        item = dict(record)
+        for key, limit in (("req", 4000), ("res", 4000), ("error", 800)):
+            if item.get(key) is not None:
+                item[key] = str(item[key])[:limit]
+        item["ts"] = _now()
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(item, ensure_ascii=False) + "\n")
+            fh.flush()
 
     def list_runs(self, owner, macro_id=None, limit=20):
         path = os.path.join(self.runs, owner, time.strftime("%Y-%m") + ".jsonl")

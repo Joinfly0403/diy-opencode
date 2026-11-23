@@ -616,11 +616,30 @@ class Handler(BaseHTTPRequestHandler):
             rec = entry["record"]
             entry["touched"] = time.time()   # STALE_RUN_V1
             if body.get("step") is not None:
-                rec.setdefault("steps", []).append({
+                step_rec = {
                     "index": body.get("step"), "action": body.get("action"),
                     "ok": bool(body.get("ok")), "ms": body.get("ms"),
                     "via": body.get("via", "ui"), "error": body.get("error"),
-                })
+                }
+                for extra_key in ("method", "endpoint", "req", "res"):
+                    if body.get(extra_key):
+                        step_rec[extra_key] = body.get(extra_key)
+                rec.setdefault("steps", []).append(step_rec)
+                if (body.get("action") == "api") or body.get("req") or body.get("res"):
+                    try:   # API_LOG_V1：每次接口调用单独落一行（入参 + 返回值）
+                        MACRO_STORE.append_api(owner, {
+                            "runId": rid,
+                            "macroId": rec.get("macroId"),
+                            "index": body.get("step"),
+                            "method": body.get("method"),
+                            "endpoint": body.get("endpoint"),
+                            "ok": bool(body.get("ok")),
+                            "req": body.get("req"),
+                            "res": body.get("res"),
+                            "error": body.get("error"),
+                        })
+                    except Exception as exc:
+                        log("append_api failed: %r" % (exc,))
             if body.get("outputs"):
                 rec.setdefault("outputs", {}).update(body["outputs"])
             if body.get("via") == "api":
