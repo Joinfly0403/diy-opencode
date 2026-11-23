@@ -96,6 +96,10 @@ class HudProxyHandler(RequestHandler):
             body = self.request.body or b"{}"
             headers["Content-Type"] = "application/json"
 
+        web_user = self.request.headers.get("X-User-Name")   # WEB_USER_V1
+        if web_user:
+            headers["X-Hud-Web-User"] = web_user
+
         if route == "events":
             yield self.stream(url, headers)
             return

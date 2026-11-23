@@ -37,6 +37,7 @@ HANDLES = {}
 MACRO_RUNS = {}          # runId -> {"record":..., "event": threading.Event()}
 MACRO_PENDING = {}       # account -> [cmd, ...]
 MACRO_LOCK = threading.Lock()
+MACRO_WEBUSER = {}       # WEB_OWNER_V1：cogagent 账号 -> 网页登录账户
 try:
     import macro_store
     MACRO_STORE = None   # 在 Server.__init__ 里初始化
@@ -329,14 +330,24 @@ class Handler(BaseHTTPRequestHandler):
         return handle, info
 
     def require_owner(self):
+        # WEB_OWNER_V1：网页登录账户优先（桥从 X-User-Name 透传）
+        web = (self.headers.get("X-Hud-Web-User") or "").strip()
         acct = (self.headers.get("X-Hud-Account") or "").strip()
         host = self.client_address[0] if self.client_address else ""
-        if acct and host in ("127.0.0.1", "::1", "::ffff:127.0.0.1"):
-            return acct
+        local = host in ("127.0.0.1", "::1", "::ffff:127.0.0.1")
+        if web and local:
+            if acct:
+                with MACRO_LOCK:
+                    MACRO_WEBUSER[acct] = web
+            return web
+        if acct and local:
+            with MACRO_LOCK:
+                return MACRO_WEBUSER.get(acct, acct)
         handle, info = self.require_handle()
         if not info:
             return None
-        return info["account"]
+        with MACRO_LOCK:
+            return MACRO_WEBUSER.get(info["account"], info["account"])
 
     def macro_ready(self):
         if MACRO_STORE is None:
