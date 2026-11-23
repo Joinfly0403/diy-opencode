@@ -1507,6 +1507,105 @@
       .catch(function (e) { macroToast("执行失败：" + String(e.message || e)); });
   }
 
+  // ===== ANNOTATE_V1：运行时稳定标识（只加内存属性，刷新即消失）=====
+  function hudText(el) {
+    if (!el) return "";
+    return ((el.innerText || el.textContent || "") + "").replace(/\s+/g, " ").trim();
+  }
+
+  function hudDialogTitle(el) {
+    var d = el.closest ? el.closest(".eui-dialog-box,[class*=dialog],[class*=Dialog]") : null;
+    if (!d) return "";
+    var t = d.querySelector(".eui-dialog-title-text,.eui-dialog-title,[class*=dialog-title]");
+    var v = hudText(t);
+    return v ? v.slice(0, 20) : "";
+  }
+
+  function hudFieldLabel(el) {
+    var aria = el.getAttribute && (el.getAttribute("aria-label") || el.getAttribute("placeholder"));
+    if (aria) return String(aria).trim().slice(0, 20);
+    var node = el, depth = 0;
+    while (node && node.nodeType === 1 && depth < 4) {
+      var lab = node.querySelector ? node.querySelector("label,.eui-form-label-required,[class*=form-label],[class*=formLabel]") : null;
+      var t = hudText(lab).replace(/[:：]$/, "").trim();
+      if (t) return t.slice(0, 20);
+      node = node.parentElement; depth++;
+    }
+    return "";
+  }
+
+  function hudIdFor(el) {
+    var tag = (el.tagName || "").toLowerCase();
+    var parts = [];
+    var dlg = hudDialogTitle(el);
+    if (dlg) parts.push("dlg=" + dlg);
+    var treeA = el.closest ? el.closest("a[id^='eui_tree_node_id']") : null;
+    if (treeA) parts.push("tree=" + hudText(treeA).slice(0, 20));
+    var inMenu = el.closest ? el.closest("[id^='eui_popup_'],[class*=dropdown],[class*=menu]") : null;
+    if (inMenu) parts.push("menu");
+
+    if (tag === "input" || tag === "textarea") {
+      parts.push("input");
+      var lb = hudFieldLabel(el);
+      if (lb) parts.push("label=" + lb);
+    } else if (tag === "select") {
+      parts.push("select");
+      var lb2 = hudFieldLabel(el);
+      if (lb2) parts.push("label=" + lb2);
+    } else if (tag === "img") {
+      parts.push("img");
+      var cn = ((el.className || "") + "").split(/\s+/).filter(Boolean)[0];
+      if (cn) parts.push("cls=" + cn);
+      if (treeA) parts.push("op");
+    } else {
+      var role = (el.getAttribute && el.getAttribute("role")) || "";
+      var txt = hudText(el);
+      if (/button|option|menuitem|tab|link/.test(role)) parts.push(role);
+      else if (tag === "button" || tag === "a") parts.push("act");
+      else parts.push("item");
+      if (txt && txt.length <= 20) parts.push("name=" + txt);
+    }
+    return parts.join("|");
+  }
+
+  var annotateTimer = 0;
+
+  function annotateNow() {
+    var nodes = document.querySelectorAll(
+      "input,textarea,select,button,a,[role=button],[role=option],[role=menuitem],[role=tab],img," +
+      "span.eui-textButton,[class*=item],[class*=Item],[class*=option],[class*=Option],[class*=menu_item],.eui-select_item"
+    );
+    var seen = {};
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      if (el.closest && el.closest('[id^="cogagent-hud-host"]')) continue;
+      var id = hudIdFor(el);
+      if (!id) continue;
+      if (seen[id]) { seen[id]++; id = id + "#" + seen[id]; } else seen[id] = 1;
+      if (el.getAttribute("data-hud-id") !== id) el.setAttribute("data-hud-id", id);
+    }
+  }
+
+  function annotateSoon() {
+    if (annotateTimer) return;
+    annotateTimer = setTimeout(function () {
+      annotateTimer = 0;
+      try { annotateNow(); } catch (err) {}
+    }, 250);
+  }
+
+  function startAnnotator() {
+    annotateSoon();
+    if (!window.__hudAnnotateObserver && window.MutationObserver && document.documentElement) {
+      var mo = new MutationObserver(function () { annotateSoon(); });
+      mo.observe(document.documentElement, { childList: true, subtree: true });
+      window.__hudAnnotateObserver = mo;
+    }
+  }
+
+  window.__hudAnnotate = function () { annotateNow(); return document.querySelectorAll("[data-hud-id]").length; };
+  // ===== /ANNOTATE_V1 =====
+
   // ===== MACRO_RECORD_V2：页面内录制（文本优先 + 作用域 + 顺序正确）=====
   var recSteps = [], recording = false, pendingFill = [];
 
@@ -1541,6 +1640,9 @@
   function recTarget(e) {
     var n = recClickable(e);
     var t = {};
+    var hid = n.getAttribute && n.getAttribute("data-hud-id");
+    if (!hid && n.closest) { var host = n.closest("[data-hud-id]"); if (host) hid = host.getAttribute("data-hud-id"); }
+    if (hid) t.testId = hid;
     var txt = (n.innerText || n.textContent || "").trim().replace(/\s+/g, " ");
     if (txt && txt.length <= 40) t.text = txt;
     var id = n.getAttribute && n.getAttribute("id");
@@ -1777,6 +1879,11 @@
 
   function macroResolve(t) {
     if (!t) return null;
+    if (t.testId) {   // ANNOTATE_V1
+      var esc = String(t.testId).replace(/"/g, '\\"');
+      var node = document.querySelector('[data-hud-id="' + esc + '"]');
+      if (node) return node;
+    }
     if (t.class) { var c = document.querySelector("." + t.class); if (c) return c; }
     if (t.selector && !/^#eui_(popup|row|tree_node_id\w*)_?\d+$/.test(t.selector)) {   // SKIP_DYNAMIC_ID_V1
       var q = document.querySelector(t.selector); if (q) return q;
@@ -1814,6 +1921,7 @@
     var until = Date.now() + (timeout || 3000);
     return new Promise(function (resolve) {
       (function tick() {
+        if (typeof annotateSoon === "function") annotateSoon();   // ANNOTATE_V1
         var el = macroResolve(t);
         if (el) { resolve(el); return; }
         if (Date.now() > until) { resolve(null); return; }
@@ -2018,6 +2126,7 @@
 
   function macroStart() {
     if (macroPollTimer) return;
+    if (typeof startAnnotator === "function") startAnnotator();   // ANNOTATE_V1
     loadMacros();
     macroPollTimer = setInterval(macroPoll, 1500);
   }
