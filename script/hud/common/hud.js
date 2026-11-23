@@ -1547,13 +1547,17 @@
     return "";
   }
 
-  function hudAncestorField(el) {   // FIELD_FROM_CONTAINER_V1
+  function hudAncestorField(el) {   // FIELD_FROM_CONTAINER_V2
     var n = el.parentElement, depth = 0;
     while (n && n !== document.body && depth++ < 12) {
       var a = n.getAttribute && n.getAttribute("data-hud-id");
       if (a && a.indexOf("field=") === 0) {
         var m = a.match(/^field=([^|]+)/);
         if (m) return m[1];
+      }
+      if (typeof hudFieldName === "function") {
+        var f2 = hudFieldName(n);
+        if (f2) return f2;
       }
       n = n.parentElement;
     }
@@ -1772,6 +1776,8 @@
 
   function recFieldTarget(e) {
     var t = recTarget(e);
+    var fld = hudFieldName(e) || hudAncestorField(e);   // FIELD_AT_RECORD_V1
+    if (fld) t.testId = "field=" + fld + "|input";
     var lab = hudFieldLabel(e);   // FIELD_HINT_V1
     if (lab) t.label = lab;
     var ph = e.getAttribute && e.getAttribute("placeholder");
