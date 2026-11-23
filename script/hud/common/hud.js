@@ -1777,6 +1777,18 @@
     renderRecCount();
   }
 
+  function onRecKey(ev) {   // PRESS_V1
+    if (!recording) return;
+    var k = ev.key;
+    if (!/^(Enter|Tab|Escape|ArrowDown|ArrowUp)$/.test(k)) return;
+    var node = ev.target && ev.target.tagName ? ev.target : document.activeElement;
+    if (node && node.closest && node.closest('[id^="cogagent-hud-host"]')) return;
+    recFlushFill();
+    recPush({ action: "press", key: k, target: recFieldTarget(node) });
+    recSteps.push({ action: "sleep", ms: 300 });
+    renderRecCount();
+  }
+
   function renderRecCount() {
     recBtn.textContent = recording ? ("■ 停止(" + recSteps.length + ")") : "● 录制";
   }
@@ -1789,6 +1801,7 @@
     document.addEventListener("click", onRecClick, true);
     document.addEventListener("input", onRecInput, true);
     document.addEventListener("change", onRecChange, true);
+    document.addEventListener("keydown", onRecKey, true);
     showToast("录制中：正常操作，完成后点「■ 停止」", "ok");
   }
 
@@ -1798,6 +1811,7 @@
     document.removeEventListener("click", onRecClick, true);
     document.removeEventListener("input", onRecInput, true);
     document.removeEventListener("change", onRecChange, true);
+    document.removeEventListener("keydown", onRecKey, true);
     recSteps = recSteps.filter(function (x, i, arr) {
       return !(x.action === "sleep" && i === arr.length - 1);
     });
@@ -1998,6 +2012,19 @@
     e.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
+  var MACRO_KEYCODES = { Enter: 13, Tab: 9, Escape: 27, ArrowDown: 40, ArrowUp: 38, " ": 32 };   // PRESS_V1
+
+  function macroPress(el, key) {
+    var node = el || document.activeElement || document.body;
+    var code = MACRO_KEYCODES[key] || 0;
+    try { if (node.focus) node.focus(); } catch (err) {}
+    var opts = { key: key, code: key, keyCode: code, which: code, bubbles: true, cancelable: true };
+    ["keydown", "keypress", "keyup"].forEach(function (type) {
+      if (type === "keypress" && key !== "Enter") return;
+      try { node.dispatchEvent(new KeyboardEvent(type, opts)); } catch (err) {}
+    });
+  }
+
   function macroWait(cond, timeout) {
     var until = Date.now() + (timeout || 10000);
     return new Promise(function (resolve, reject) {
@@ -2096,6 +2123,13 @@
         guard(macroResolveWait(step.target, 4000).then(function (el) {
           if (!el) throw new Error("找不到输入框 " + desc);
           macroFill(el, macroExpand(step.value, params)); done();
+        }));
+        return;
+      }
+      if (step.action === "press") {   // PRESS_V1
+        guard(macroResolveWait(step.target, 4000).then(function (el) {
+          macroPress(el, step.key || "Enter");
+          done({ action: "press", ms: Date.now() - t0 });
         }));
         return;
       }
