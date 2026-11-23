@@ -232,13 +232,19 @@
     perm: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b6478" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 20 5.6v5.6c0 4.9-3.3 9-8 10.3-4.7-1.3-8-5.4-8-10.3V5.6z"/><circle cx="12" cy="11" r="2.2"/><path d="M14.9 11h1.3M12 8.1V6.8M9.1 11H7.8M12 13.9v1.3M14.05 8.95l.92-.92M9.95 8.95l-.92-.92M9.95 13.05l-.92.92M14.05 13.05l.92.92"/></svg>'
   };
 
+  function iconDataUri(svg) {   // ICON_DATAURI_V1
+    return 'url("data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '")';
+  }
+
   function iconPicker(sel, icon, label) {
     var wrap = el("div");
     wrap.style.cssText = "position:relative;display:inline-flex";
     var btn = el("button", "btn", "");
-    btn.innerHTML = icon;
-    if (!btn.querySelector("svg")) btn.textContent = label.slice(0, 1);   // ICON_FALLBACK_V1
-    btn.style.cssText = "padding:2px 7px;line-height:0;display:inline-flex;align-items:center;justify-content:center";
+    btn.style.cssText = "padding:0;width:28px;height:22px;line-height:0;display:inline-flex;align-items:center;justify-content:center;"
+      + "background-repeat:no-repeat;background-position:center;background-size:16px 16px";
+    btn.style.backgroundImage = iconDataUri(icon);
+    btn.setAttribute("aria-label", label);
+    btn.dataset.icon = icon;
     btn.title = label + "：" + (sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "");
     var pop = el("div");
     pop.style.cssText = "display:none;position:absolute;bottom:110%;left:0;min-width:150px;max-height:220px;overflow:auto;"
@@ -275,8 +281,8 @@
   }
 
   var modelPick = iconPicker(modelSel, HUD_SVG.model, "模型");
-  var agentPick = iconPicker(agentSel, HUD_SVG.user, "模式");
-  var permPick = iconPicker(modeSel, HUD_SVG.perm, "权限");
+  var agentPick = iconPicker(agentSel, HUD_SVG.user, "用户模式");
+  var permPick = iconPicker(modeSel, HUD_SVG.perm, "权限设置");
   topRow.appendChild(modelPick); topRow.appendChild(agentPick); topRow.appendChild(permPick);
 
   function refreshPickTitles() {
@@ -284,10 +290,14 @@
       var sel = w === modelPick ? modelSel : (w === agentPick ? agentSel : modeSel);
       var txt = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "";
       w.__btn.title = w.__label + "：" + txt;
-      if (w === agentPick) w.__btn.innerHTML = sel.value === "plan" ? HUD_SVG.user : HUD_SVG.dev;
+      if (w === agentPick) {
+        var svgAgent = sel.value === "plan" ? HUD_SVG.user : HUD_SVG.dev;
+        w.__btn.style.backgroundImage = iconDataUri(svgAgent);
+        w.__btn.dataset.icon = svgAgent;
+      }
       if (w === permPick) {
-        w.__btn.innerHTML = HUD_SVG.perm;
-        w.__btn.style.color = sel.value === "bypass" ? "#d64545" : "#5b6478";
+        w.__btn.style.backgroundImage = iconDataUri(HUD_SVG.perm);
+        w.__btn.style.opacity = sel.value === "bypass" ? "1" : "0.75";
       }
     });
   }
