@@ -311,7 +311,17 @@
       refresh();
       pop.style.display = pop.style.display === "none" ? "block" : "none";
     };
-    wrap.addEventListener("mouseleave", function () { setTimeout(function () { pop.style.display = "none"; }, 250); });
+    var inside = false;   // POP_HOVER_V1：只有真正离开按钮和弹层才关闭
+    function scheduleClose() {
+      setTimeout(function () { if (!inside) pop.style.display = "none"; }, 260);
+    }
+    wrap.addEventListener("mouseenter", function () { inside = true; });
+    wrap.addEventListener("mouseleave", function () { inside = false; scheduleClose(); });
+    pop.addEventListener("mouseenter", function () { inside = true; });
+    pop.addEventListener("mouseleave", function () { inside = false; scheduleClose(); });
+    document.addEventListener("click", function (ev) {
+      try { if (!wrap.contains(ev.target)) pop.style.display = "none"; } catch (e) {}
+    }, true);
     wrap.appendChild(btn); wrap.appendChild(pop);
     wrap.__btn = btn; wrap.__pop = pop; wrap.__label = label;
     return wrap;
