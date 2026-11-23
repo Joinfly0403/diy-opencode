@@ -2105,6 +2105,60 @@
     return v;
   }
 
+  function recAutoLookup(steps) {   // REC_LOOKUP_V1
+    var createPrj = null, createSite = null;
+    steps.forEach(function (st) {
+      var ep = String(st.endpoint || "");
+      if (ep.indexOf("/createPrj") >= 0) createPrj = st;
+      if (ep.indexOf("/createSite") >= 0) createSite = st;
+    });
+    var prjName = createPrj && createPrj.payload ? createPrj.payload.project_name : null;
+    var siteName = createSite && createSite.payload ? createSite.payload.site_name : null;
+
+    function replaceInPayloads(fromIndex, lit, ph) {
+      var changed = 0;
+      for (var i = fromIndex; i < steps.length; i++) {
+        var st = steps[i];
+        if (!st.payload || typeof st.payload !== "object") continue;
+        var nx = recReplaceExact(st.payload, String(lit), ph);
+        if (JSON.stringify(nx) !== JSON.stringify(st.payload)) {
+          st.payload = nx;
+          changed++;
+        }
+      }
+      return changed;
+    }
+
+    if (createSite && prjName) {
+      var ci = steps.indexOf(createSite);
+      createSite.payload = createSite.payload || {};
+      createSite.payload.project_id = "{{project_id}}";
+      steps.splice(ci, 0, {
+        action: "lookup", method: "POST",
+        endpoint: "/rest/ossdesign/v1/designer/queryPrjLst",
+        payload: {}, from: "ProjectList",
+        where: { text: prjName }, pick: "id", as: "project_id"
+      });
+    }
+
+    if (createSite && siteName) {
+      var si = steps.indexOf(createSite) + 1;
+      var litId = null;
+      for (var k = si; k < steps.length; k++) {
+        var pl = steps[k].payload;
+        if (pl && typeof pl === "object" && pl.site_id != null) { litId = pl.site_id; break; }
+      }
+      steps.splice(si, 0, {
+        action: "lookup", method: "POST",
+        endpoint: "/rest/ossdesign/v1/designer/querySiteLst",
+        payload: {}, from: "SiteList",
+        where: { text: siteName, pid: "{{project_id}}" }, pick: "id", as: "site_id"
+      });
+      if (litId != null) replaceInPayloads(si + 1, litId, "{{site_id}}");
+    }
+    return steps;
+  }
+
   function recCorrelate(steps) {
     var resps = steps.map(function (st) {
       try { return JSON.parse(st.__resp || "null"); } catch (e) { return null; }
@@ -2300,6 +2354,7 @@
     try { apiSteps = recApiSteps(); } catch (err) { apiSteps = []; }
     if (apiSteps.length) {   // REC_NET_V1：有接口流量就保存接口动作
       apiSteps = recCorrelate(apiSteps);
+      apiSteps = recAutoLookup(apiSteps);   // REC_LOOKUP_V1
       apiSteps.push({ action: "reload" });   // RELOAD_V1：接口执行完刷新前台数据   // CORRELATE_V1：把上一步响应里的 id 变成占位符
       apiSteps.forEach(function (st) {
         var pl = st.payload;
@@ -2915,6 +2970,32 @@
       if (step.action === "wait") {
         guard(macroWait(step.for || {}, step.timeout).then(function () {
           done({ action: "wait", ms: Date.now() - t0 });
+        }));
+        return;
+      }
+      if (step.action === "lookup") {   // LOOKUP_V1：按名称查 id，解决"新建对象 id 未知"
+        guard(macroApiCall({
+          method: step.method || "POST", endpoint: step.endpoint,
+          payload: step.payload || {}, headers: step.headers || {}
+        }, params, outputs).then(function (out) {
+          var data = (out && out.body !== undefined) ? out.body : out;
+          var arr = macroGetPath(data, step.from || "");
+          if (!Array.isArray(arr)) throw new Error("lookup 未拿到列表 " + (step.from || "") + " @ " + step.endpoint);
+          var want = macroDeepExpand(step.where || {}, params, outputs);
+          var hit = null;
+          for (var li = 0; li < arr.length; li++) {
+            var it = arr[li], okAll = true;
+            for (var wk in want) {
+              if (!Object.prototype.hasOwnProperty.call(want, wk)) continue;
+              if (String(it[wk]) !== String(want[wk])) { okAll = false; break; }
+            }
+            if (okAll) { hit = it; break; }
+          }
+          if (!hit) throw new Error("lookup 未找到匹配项 " + JSON.stringify(want) + " @ " + step.endpoint);
+          var picked = macroGetPath(hit, step.pick || "id");
+          outputs[step.as || "lookup"] = picked;
+          console.log("[macro-lookup] " + step.endpoint + " " + JSON.stringify(want) + " => " + step.as + "=" + picked);
+          done({ action: "lookup", endpoint: step.endpoint, ms: Date.now() - t0, res: JSON.stringify(hit).slice(0, 200) });
         }));
         return;
       }
