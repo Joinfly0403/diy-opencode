@@ -1672,11 +1672,17 @@
       if (base) list.push([el, base]);
     }
     var counts = {};
-    for (var ci = 0; ci < list.length; ci++) counts[list[ci][1]] = (counts[list[ci][1]] || 0) + 1;
+    for (var ci = 0; ci < list.length; ci++) {
+      var scope = hudScopeKey(list[ci][0]);   // SCOPE_ORDINAL_V1
+      list[ci].push(scope);
+      var key = scope + "||" + list[ci][1];
+      counts[key] = (counts[key] || 0) + 1;
+    }
     var seen = {};
     for (var ai = 0; ai < list.length; ai++) {
-      var node = list[ai][0], b = list[ai][1], id = b;
-      if (counts[b] > 1) { seen[b] = (seen[b] || 0) + 1; id = b + "|i=" + seen[b]; }
+      var node = list[ai][0], b = list[ai][1], sc = list[ai][2], id = b;
+      var k2 = sc + "||" + b;
+      if (counts[k2] > 1) { seen[k2] = (seen[k2] || 0) + 1; id = b + "|i=" + seen[k2]; }
       if (node.getAttribute("data-hud-id") !== id) node.setAttribute("data-hud-id", id);
     }
   }
@@ -2077,6 +2083,18 @@
         var k = parseInt(m[2], 10) - 1;
         if (list[k]) return list[k];
       }
+      // TESTID_BASE_V1：忽略 |i= 序号，按基数找唯一可见元素
+      var baseId = rawId.replace(/\|i=\d+$/, "");
+      if (baseId !== rawId) {
+        var bAll = document.querySelectorAll("[data-hud-id]");
+        var bHits = [];
+        for (var bi = 0; bi < bAll.length; bi++) {
+          var bv = bAll[bi].getAttribute("data-hud-id") || "";
+          if ((bv === baseId || bv.indexOf(baseId + "|") === 0) && macroVisible(bAll[bi])) bHits.push(bAll[bi]);
+        }
+        if (bHits.length === 1) return bHits[0];
+      }
+
       // TESTID_PREFIX_V1：field=project_name|input 命中 field=project_name|input|cls=xxx
       var pref = rawId.replace(/"/g, '\\"');
       var prefHits = [];
