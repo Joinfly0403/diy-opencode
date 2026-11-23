@@ -1468,6 +1468,9 @@
   var macroBar = el("div", "macrobar");
   macroBar.style.cssText = "display:flex;gap:6px;align-items:center;overflow-x:auto;padding:6px 8px;border-bottom:1px solid #e8ecf3;background:#fbfcfe;flex:0 0 auto";
   if (hd.nextSibling) panel.insertBefore(macroBar, hd.nextSibling); else panel.appendChild(macroBar);
+  var macroList = el("div");                       // RECORD_V3
+  macroList.style.cssText = "display:flex;gap:6px;align-items:center;overflow-x:auto;flex:1 1 auto";
+  macroBar.appendChild(macroList);
 
   var macroRunning = false;
   var macroPollTimer = null;
@@ -1479,20 +1482,20 @@
   function loadMacros() {
     api("/macro/list").then(function (d) {
       var list = (d && d.macros) || [];
-      macroBar.innerHTML = "";
+      macroList.innerHTML = "";
       if (!list.length) return;
       list.slice(0, 12).forEach(function (m) {
         var b = el("button", "btn", m.name || m.id);
         b.title = (m.description || "") + "（v" + m.version + (m.owner ? " · " + m.owner : "") + "）";
         b.style.cssText = "flex:0 0 auto;font-size:11px;padding:2px 8px";
         b.onclick = function () { runMacroById(m.id); };
-        macroBar.appendChild(b);
+        macroList.appendChild(b);
       });
       if (list.length > 12) {
         var more = el("button", "btn", "⋯ " + (list.length - 12));
         more.style.cssText = "flex:0 0 auto;font-size:11px;padding:2px 8px";
         more.onclick = function () { showToast("还有 " + (list.length - 12) + " 个动作（列表功能开发中）"); };
-        macroBar.appendChild(more);
+        macroList.appendChild(more);
       }
     }).catch(function () {});
   }
@@ -1503,6 +1506,97 @@
       .then(function (d) { macroToast("已开始执行：" + id + "（" + (d.runId || "") + "）", true); })
       .catch(function (e) { macroToast("执行失败：" + String(e.message || e)); });
   }
+
+  // ===== MACRO_RECORD_V1：页面内录制 =====
+  var recSteps = [], recording = false;
+
+  var recBtn = el("button", "btn", "● 录制");
+  recBtn.style.cssText = "flex:0 0 auto;font-size:11px;padding:2px 8px;white-space:nowrap";
+  recBtn.onclick = function () { if (recording) stopRecord(); else startRecord(); };
+  macroBar.appendChild(recBtn);
+
+  function cssPath(e) {
+    if (!e || !e.tagName) return "";
+    if (e.id) return "#" + e.id;
+    var parts = [], node = e, depth = 0;
+    while (node && node.nodeType === 1 && depth < 4) {
+      var sel = node.tagName.toLowerCase();
+      var parent = node.parentElement;
+      if (parent) {
+        var same = 0, idx = 0;
+        for (var i = 0; i < parent.children.length; i++) {
+          if (parent.children[i].tagName === node.tagName) { same++; if (parent.children[i] === node) idx = same; }
+        }
+        if (same > 1) sel += ":nth-of-type(" + idx + ")";
+      }
+      parts.unshift(sel);
+      node = parent; depth++;
+    }
+    return parts.join(" > ");
+  }
+
+  function recTarget(e) {
+    var t = { selector: cssPath(e) };
+    var txt = (e.innerText || e.textContent || "").trim();
+    if (txt && txt.length <= 20) t.text = txt;
+    return t;
+  }
+
+  function recNormalize(step) {   // 录制时把值转成参数占位
+    return step;
+  }
+
+  function onRecClick(ev) {
+    if (!recording) return;
+    var e = ev.target;
+    if (!e || (e.closest && e.closest('[id^="cogagent-hud-host"]'))) return;
+    var tag = (e.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return;
+    recSteps.push({ action: "click", target: recTarget(e) });
+    recSteps.push({ action: "sleep", ms: 400 });
+    renderRecCount();
+  }
+
+  function onRecChange(ev) {
+    if (!recording) return;
+    var e = ev.target;
+    if (!e || !e.tagName) return;
+    var tag = e.tagName.toLowerCase();
+    if (tag === "select") {
+      recSteps.push({ action: "select", target: recTarget(e), value: e.value });
+    } else if (tag === "input" || tag === "textarea") {
+      if (!e.value) return;
+      recSteps.push({ action: "fill", target: recTarget(e), value: e.value });
+      recSteps.push({ action: "sleep", ms: 150 });
+    }
+    renderRecCount();
+  }
+
+  function renderRecCount() {
+    recBtn.textContent = recording ? ("■ 停止(" + recSteps.length + ")") : "● 录制";
+  }
+
+  function startRecord() {
+    recSteps = []; recording = true; renderRecCount();
+    document.addEventListener("click", onRecClick, true);
+    document.addEventListener("change", onRecChange, true);
+    showToast("录制中：在页面上操作，完成后点「■ 停止」", "ok");
+  }
+
+  function stopRecord() {
+    recording = false;
+    document.removeEventListener("click", onRecClick, true);
+    document.removeEventListener("change", onRecChange, true);
+    renderRecCount();
+    if (!recSteps.length) { showToast("没有录到任何操作"); return; }
+    var name = window.prompt("动作名称（保存后可在工具栏点击执行）", "录制动作 " + new Date().toLocaleTimeString());
+    if (!name) { showToast("已取消保存"); return; }
+    var id = "rec-" + Date.now().toString(36);
+    api("/macro/save", { method: "POST", body: { mode: "upsert", macro: { id: id, name: name, description: "录制于 " + location.href, steps: recSteps } } })
+      .then(function () { showToast("已保存：" + name, "ok"); loadMacros(); })
+      .catch(function (e) { showToast("保存失败：" + String(e.message || e)); });
+  }
+  // ===== /MACRO_RECORD_V1 =====
 
   function macroReport(cmd, step, ok, extra) {
     var b = { sessionID: state.active, id: cmd.runId, runId: cmd.runId, step: step, ok: ok };
