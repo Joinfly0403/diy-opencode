@@ -28,7 +28,7 @@
     "background:#2F6BFF;color:#fff;display:flex;align-items:center;justify-content:center;",
     "font:600 13px/1.2 system-ui,-apple-system,'Segoe UI',sans-serif;cursor:pointer;",
     "box-shadow:0 6px 20px rgba(0,0,0,.28);z-index:2147483000;user-select:none}",
-    ".panel{position:fixed;right:24px;bottom:92px;width:min(760px,92vw);height:min(620px,80vh);",
+    ".panel{position:fixed;right:24px;bottom:92px;width:min(760px,92vw);height:min(620px,80vh);resize:both;",
     "background:#fff;color:#1f2329;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.28);",
     "display:flex;flex-direction:column;overflow:hidden;z-index:2147483001;",
     "font:13px/1.6 system-ui,-apple-system,'Segoe UI',sans-serif}",
@@ -170,8 +170,13 @@
   search.placeholder = "搜索会话…";
   search.oninput = function () { state.query = search.value.trim(); renderList(); };
   var searchRow = el("div");   // NEWBTN_ICON_V1：搜索框 + "+" 同一行
-  searchRow.style.cssText = "display:flex;gap:6px;align-items:center;padding:4px 8px";
+  searchRow.style.cssText = "display:flex;gap:6px;align-items:center;padding:2px 8px 6px;width:auto";
+  search.style.margin = "0";
+  search.style.minWidth = "0";
+  search.style.width = "auto";
   search.style.flex = "1 1 auto";
+  search.style.boxSizing = "border-box";
+  listTop.style.display = "none";
   searchRow.appendChild(search);
   searchRow.appendChild(newBtn);
   listBox.appendChild(listTop);
@@ -1504,6 +1509,8 @@
     } catch (e) {}
 
     var grip = el("div", "resizer");
+    grip.style.zIndex = "9999";
+    grip.style.pointerEvents = "auto";
     grip.title = "拖动这里调整窗口大小（位置和尺寸会自动记住）";
     panel.appendChild(grip);
 
