@@ -1,0 +1,54 @@
+{
+  "id": "create-project",
+  "name": "创建项目",
+  "description": "点创建项目 → 填项目名称（带时间戳）→ 确定 → 等树节点出现",
+  "scope": "private",
+  "params": {
+    "projectName": {
+      "label": "项目名称",
+      "template": "PRJ-{{datetime}}"
+    }
+  },
+  "steps": [
+    {
+      "action": "click",
+      "target": {
+        "text": "创建项目"
+      }
+    },
+    {
+      "action": "wait",
+      "for": {
+        "text": "项目名称"
+      },
+      "timeout": 8000
+    },
+    {
+      "action": "fill",
+      "target": {
+        "label": "项目名称"
+      },
+      "value": "{{projectName}}"
+    },
+    {
+      "action": "click",
+      "target": {
+        "text": "确定"
+      }
+    },
+    {
+      "action": "wait",
+      "for": {
+        "class": "projectTree"
+      },
+      "timeout": 10000
+    },
+    {
+      "action": "verify",
+      "target": {
+        "text": "{{projectName}}",
+        "scope": ".projectTree"
+      }
+    }
+  ]
+}

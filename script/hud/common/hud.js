@@ -1518,8 +1518,8 @@
   function macroByText(text, cls) {
     var root = cls ? document.querySelector(cls) : document;
     if (!root) return null;
-    var nodes = root.querySelectorAll("button,a,span,div,li,td,label");
-    var best = null, bestArea = Infinity;
+    var nodes = root.querySelectorAll("button,a,span,div,li,td,label,[role=button]");
+    var best = null, bestScore = -1, bestArea = Infinity;
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
       if (!macroVisible(n)) continue;
@@ -1527,7 +1527,17 @@
       if (t !== text && t.indexOf(text) < 0) continue;
       var r = n.getBoundingClientRect();
       var area = r.width * r.height;
-      if (area > 0 && area < bestArea) { best = n; bestArea = area; }
+      if (!(area > 0)) continue;
+      var score = 0;
+      var tag = (n.tagName || "").toLowerCase();
+      if (tag === "button" || tag === "a") score += 50;
+      if (n.getAttribute && n.getAttribute("role") === "button") score += 40;
+      var cn = (n.className && n.className.toString ? n.className.toString() : "");
+      if (/btn|Button/.test(cn)) score += 30;
+      if (t === text) score += 10;
+      if (score > bestScore || (score === bestScore && area < bestArea)) {
+        best = n; bestScore = score; bestArea = area;
+      }
     }
     return best;
   }
