@@ -1534,37 +1534,46 @@
     return "";
   }
 
-  function hudIdFor(el) {
+  function hudName(el) {
+    var v = (el.getAttribute && (el.getAttribute("aria-label") || el.getAttribute("title") || el.getAttribute("placeholder") || el.getAttribute("alt"))) || "";
+    if (!v) v = hudText(el);
+    return String(v).replace(/\s+/g, " ").trim().slice(0, 20);
+  }
+
+  function hudKind(el) {
     var tag = (el.tagName || "").toLowerCase();
+    var role = (el.getAttribute && el.getAttribute("role")) || "";
+    if (tag === "input" || tag === "textarea") return "input";
+    if (tag === "select") return "select";
+    if (tag === "img") return "img";
+    if (role) return role;
+    if (tag === "button" || tag === "a") return "act";
+    if (/btn|button/i.test(((el.className || "") + ""))) return "act";
+    return "item";
+  }
+
+  function hudIdFor(el) {
     var parts = [];
     var dlg = hudDialogTitle(el);
     if (dlg) parts.push("dlg=" + dlg);
     var treeA = el.closest ? el.closest("a[id^='eui_tree_node_id']") : null;
-    if (treeA) parts.push("tree=" + hudText(treeA).slice(0, 20));
-    var inMenu = el.closest ? el.closest("[id^='eui_popup_'],[class*=dropdown],[class*=menu]") : null;
-    if (inMenu) parts.push("menu");
-
-    if (tag === "input" || tag === "textarea") {
-      parts.push("input");
-      var lb = hudFieldLabel(el);
-      if (lb) parts.push("label=" + lb);
-    } else if (tag === "select") {
-      parts.push("select");
-      var lb2 = hudFieldLabel(el);
-      if (lb2) parts.push("label=" + lb2);
-    } else if (tag === "img") {
-      parts.push("img");
-      var cn = ((el.className || "") + "").split(/\s+/).filter(Boolean)[0];
-      if (cn) parts.push("cls=" + cn);
-      if (treeA) parts.push("op");
-    } else {
-      var role = (el.getAttribute && el.getAttribute("role")) || "";
-      var txt = hudText(el);
-      if (/button|option|menuitem|tab|link/.test(role)) parts.push(role);
-      else if (tag === "button" || tag === "a") parts.push("act");
-      else parts.push("item");
-      if (txt && txt.length <= 20) parts.push("name=" + txt);
+    if (treeA) {
+      var tid = (treeA.getAttribute("id") || "").replace("eui_tree_node_id", "");
+      parts.push("tree=" + (tid || hudText(treeA).slice(0, 20)));
     }
+    if (el.closest && el.closest("[id^='eui_popup_']")) parts.push("popup");
+    if (!treeA && el.parentElement) {
+      var anc = el.parentElement.closest("[id]");
+      if (anc && anc !== el) parts.push("in=" + String(anc.id).slice(0, 24));
+    }
+    parts.push(hudKind(el));
+    var nm = hudName(el);
+    if (nm) parts.push("name=" + nm);
+    if (parts.length <= 2) {
+      var cls = ((el.className || "") + "").split(/\s+/).filter(Boolean)[0];
+      if (cls) parts.push("cls=" + cls.slice(0, 24));
+    }
+    if (parts.join("|").length < 5) parts.unshift((el.tagName || "").toLowerCase());
     return parts.join("|");
   }
 
@@ -1575,14 +1584,20 @@
       "input,textarea,select,button,a,[role=button],[role=option],[role=menuitem],[role=tab],img," +
       "span.eui-textButton,[class*=item],[class*=Item],[class*=option],[class*=Option],[class*=menu_item],.eui-select_item"
     );
-    var seen = {};
+    var list = [];
     for (var i = 0; i < nodes.length; i++) {
       var el = nodes[i];
       if (el.closest && el.closest('[id^="cogagent-hud-host"]')) continue;
-      var id = hudIdFor(el);
-      if (!id) continue;
-      if (seen[id]) { seen[id]++; id = id + "#" + seen[id]; } else seen[id] = 1;
-      if (el.getAttribute("data-hud-id") !== id) el.setAttribute("data-hud-id", id);
+      var base = hudIdFor(el);
+      if (base) list.push([el, base]);
+    }
+    var counts = {};
+    for (var ci = 0; ci < list.length; ci++) counts[list[ci][1]] = (counts[list[ci][1]] || 0) + 1;
+    var seen = {};
+    for (var ai = 0; ai < list.length; ai++) {
+      var node = list[ai][0], b = list[ai][1], id = b;
+      if (counts[b] > 1) { seen[b] = (seen[b] || 0) + 1; id = b + "|i=" + seen[b]; }
+      if (node.getAttribute("data-hud-id") !== id) node.setAttribute("data-hud-id", id);
     }
   }
 
@@ -1880,9 +1895,17 @@
   function macroResolve(t) {
     if (!t) return null;
     if (t.testId) {   // ANNOTATE_V1
-      var esc = String(t.testId).replace(/"/g, '\\"');
+      var rawId = String(t.testId);
+      var esc = rawId.replace(/"/g, '\\"');
       var node = document.querySelector('[data-hud-id="' + esc + '"]');
       if (node) return node;
+      var m = rawId.match(/^(.*)\|i=(\d+)$/);
+      if (m) {
+        var pre = m[1].replace(/"/g, '\\"');
+        var list = document.querySelectorAll('[data-hud-id^="' + pre + '|i="]');
+        var k = parseInt(m[2], 10) - 1;
+        if (list[k]) return list[k];
+      }
     }
     if (t.class) { var c = document.querySelector("." + t.class); if (c) return c; }
     if (t.selector && !/^#eui_(popup|row|tree_node_id\w*)_?\d+$/.test(t.selector)) {   // SKIP_DYNAMIC_ID_V1
