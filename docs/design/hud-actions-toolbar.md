@@ -730,3 +730,119 @@ POST {upstream}/api/session/{sessionID}/synthetic
 | SSE 断线导致 run 悬挂 | 状态不一致 | deadline + 客户端心跳；超时置 failed | 重启 broker（状态重建） |
 | broker 存储损坏 | 动作丢失 | 写临时文件 + 原子 rename；每日备份 | 从备份恢复 macros/ |
 | AI 误删动作 | 数据丢失 | 默认软删除 + 版本历史 | 恢复 deletedAt / 回滚版本 |
+
+---
+
+## 26. 执行策略（最终确定）：**UI 优先，接口兜底**
+
+### 26.1 原则
+
+| 优先级 | 手段 | 何时使用 |
+|---|---|---|
+| 1（默认） | **页面 UI 动作**（click/fill/select/wait/read） | 所有流程的默认路径；用户能看到、能干预 |
+| 2（兜底） | **接口直调**（api 动作） | 仅当 UI 步骤失败（找不到元素/不可点/超时）且该步骤声明了 fallback |
+| 禁止 | 跳过 UI 直接调接口 | 除非动作显式声明 `mode: "api-first"`（默认不提供） |
+
+> 与早期讨论的差异：早期曾讨论“接口优先”，现按业务要求改为 **UI 优先、接口兜底**。
+
+### 26.2 触发兜底的条件（满足任一）
+
+| 条件 | 判定 |
+|---|---|
+| 元素找不到 | 5 级定位全部失败（等待 5s 后） |
+| 元素不可交互 | 命中但 `disabled` / 被遮挡重试 2 次仍失败 |
+| 等待条件超时 | wait 步骤超时且声明了 fallback |
+| 页面异常 | 步骤执行抛出未捕获异常 |
+
+不触发兜底：`danger:true` 步骤在 ask 模式下被用户拒绝（这是用户意图，不是失败）。
+
+### 26.3 DSL 扩展
+
+#### 新增动作：api（兜底专用）
+```json
+{ "action": "api",
+  "endpoint": "/rest/ossdesign/v1/designer/createSite",
+  "payload": { "project_id": "{{projectId}}", "site_name": "{{siteName}}" },
+  "expect": { "status": 200 },
+  "as": "createResult" }
+```
+| 字段 | 说明 |
+|---|---|
+| endpoint | 必须是同源 `/rest/ossdesign/v1/designer/*`（白名单前缀） |
+| payload | 支持 `{{param}}` / `{{outputs.x}}` 展开 |
+| expect | 成功判定（status / json 路径匹配） |
+| as | 把响应 JSON 存入 outputs |
+
+#### 新增动作：refresh / verify
+```json
+{ "action": "refresh", "wait": { "class": "projectTree", "timeout": 10000 } }
+{ "action": "verify",  "target": { "text": "{{siteName}}" }, "in": { "class": "projectTree" } }
+```
+`api` 兜底后**必须**跟 `refresh` + `verify`（否则页面数据是旧的，后续步骤必错）。
+
+#### 步骤级 fallback 声明
+```json
+{ "action": "click",
+  "target": { "menuKey": "addSite" },
+  "fallback": { "action": "api", "endpoint": "/rest/ossdesign/v1/designer/createSite",
+                "payload": { "project_id": "{{projectId}}", "site_name": "{{siteName}}" },
+                "expect": { "status": 200 } } }
+```
+| 规则 | 说明 |
+|---|---|
+| fallback 只允许挂在一级步骤上 | 不支持嵌套 fallback |
+| 同一动作内 fallback 使用次数上限 | 3 次（超过 → failed，避免半 UI 半接口的混乱状态） |
+| fallback 后自动插入 refresh+verify | 执行器自动补，不需要写进 steps |
+| 审计记录 | `steps[i].via = "ui"|"api"`，并在 run 记录 `fallbackUsed: true` |
+
+### 26.4 执行流程（伪代码）
+
+```
+for step in steps:
+  el = resolveTarget(step, timeout=5s)
+  if (!el):
+    if (step.fallback && fallbackCount < 3):
+      report(step.i, via='api', reason='target_not_found')
+      await callApi(step.fallback)
+      await autoRefresh(); await autoVerify(); fallbackCount++
+      continue
+    else: report(failed, 'target_not_found'); return
+  ...正常 UI 执行...
+  if (uiFailed && step.fallback): 同上走兜底
+```
+
+### 26.5 可见性与告知（重要）
+
+| 对象 | 提示 |
+|---|---|
+| 用户 | HUD 内黄色提示：`第 3 步改用接口完成（创建站点），页面已刷新` |
+| AI | 合成消息里标注：`第3步 UI 失败→接口兜底成功（createSite）` |
+| 审计 | run 记录 `fallbackUsed` 与每步 `via` |
+| 工具卡片 | 该步骤显示 `via: api` 角标 |
+
+### 26.6 一致性风险与对策
+
+| 风险 | 说明 | 对策 |
+|---|---|---|
+| 前端状态不同步 | 接口写库后页面没刷新 | 强制 refresh + verify |
+| 前端校验被绕过 | 接口不校验 UI 层规则（如名称长度/重名提示） | 兜底后 verify 失败即报错；danger 步骤仍确认 |
+| 半 UI 半接口导致向导错乱 | 例：向导第 2 步用接口，第 3 步 UI 依赖第 2 步内存状态 | 向导类流程**建议整体 UI**；兜底只用于独立步骤（建站点/改名/删除） |
+| 权限差异 | 接口可能有前端未暴露的校验 | 兜底失败时保留原始错误体给 AI/用户 |
+
+### 26.7 验收用例（追加）
+
+| # | 用例 | 期望 |
+|---|---|---|
+| 12 | 正常流程（UI 可用） | 全程走 UI，`via=ui`，不触发兜底 |
+| 13 | 人为把按钮改坏（或删掉）后执行 | 自动走 fallback → 页面刷新 → verify 通过 → 用户看到黄色提示 |
+| 14 | fallback 也失败 | failed，错误体包含接口返回码与消息，AI 能读到 |
+| 15 | 同一动作触发 >3 次兜底 | 直接 failed，不允许继续（防状态混乱） |
+
+### 26.8 对里程碑的影响
+
+| 阶段 | 变更 |
+|---|---|
+| M1 | 增加 `api` / `refresh` / `verify` 三个动作与兜底流程（+0.5 天） |
+| M2 | 动作 JSON 增加 fallback 字段编辑（工具栏右键「配置兜底接口」）（+0.5 天） |
+| M4 | 合成消息与工具卡片增加 `via` 标注（+0.2 天） |
+| **合计** | **8–9 天 → 9–10 天** |
