@@ -226,10 +226,10 @@
   topRow.appendChild(modelSel); topRow.appendChild(agentSel); topRow.appendChild(modeSel);
 
   var HUD_SVG = {   // ICON_SVG_V1
-    model: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="12.5" height="12" rx="3"/><circle cx="6.8" cy="10" r="1.05" fill="currentColor" stroke="none"/><circle cx="6.8" cy="14" r="1.05" fill="currentColor" stroke="none"/><circle cx="11.3" cy="12" r="1.05" fill="currentColor" stroke="none"/><path d="M6.8 10 11.3 12M6.8 14 11.3 12"/><path d="M17.4 10.7 19.9 13.2 22.4 10.7"/></svg>',
-    user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="2.6"/><path d="M6.5 19c0-3.1 2.5-5.2 5.5-5.2s5.5 2.1 5.5 5.2"/></svg>',
-    dev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7.5 4.5 12 9 16.5"/><path d="M15 7.5 19.5 12 15 16.5"/><path d="M13.2 6.5 10.8 17.5"/></svg>',
-    perm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 20 5.6v5.6c0 4.9-3.3 9-8 10.3-4.7-1.3-8-5.4-8-10.3V5.6z"/><circle cx="12" cy="11" r="2.2"/><path d="M14.9 11h1.3M12 8.1V6.8M9.1 11H7.8M12 13.9v1.3M14.05 8.95l.92-.92M9.95 8.95l-.92-.92M9.95 13.05l-.92.92M14.05 13.05l.92.92"/></svg>'
+    model: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b6478" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="12.5" height="12" rx="3"/><circle cx="6.8" cy="10" r="1.05" fill="currentColor" stroke="none"/><circle cx="6.8" cy="14" r="1.05" fill="currentColor" stroke="none"/><circle cx="11.3" cy="12" r="1.05" fill="currentColor" stroke="none"/><path d="M6.8 10 11.3 12M6.8 14 11.3 12"/><path d="M17.4 10.7 19.9 13.2 22.4 10.7"/></svg>',
+    user: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b6478" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="2.6"/><path d="M6.5 19c0-3.1 2.5-5.2 5.5-5.2s5.5 2.1 5.5 5.2"/></svg>',
+    dev: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b6478" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7.5 4.5 12 9 16.5"/><path d="M15 7.5 19.5 12 15 16.5"/><path d="M13.2 6.5 10.8 17.5"/></svg>',
+    perm: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b6478" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 20 5.6v5.6c0 4.9-3.3 9-8 10.3-4.7-1.3-8-5.4-8-10.3V5.6z"/><circle cx="12" cy="11" r="2.2"/><path d="M14.9 11h1.3M12 8.1V6.8M9.1 11H7.8M12 13.9v1.3M14.05 8.95l.92-.92M9.95 8.95l-.92-.92M9.95 13.05l-.92.92M14.05 13.05l.92.92"/></svg>'
   };
 
   function iconPicker(sel, icon, label) {
@@ -237,6 +237,7 @@
     wrap.style.cssText = "position:relative;display:inline-flex";
     var btn = el("button", "btn", "");
     btn.innerHTML = icon;
+    if (!btn.querySelector("svg")) btn.textContent = label.slice(0, 1);   // ICON_FALLBACK_V1
     btn.style.cssText = "padding:2px 7px;line-height:0;display:inline-flex;align-items:center;justify-content:center";
     btn.title = label + "：" + (sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "");
     var pop = el("div");
