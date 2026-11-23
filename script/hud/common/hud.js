@@ -1518,38 +1518,55 @@
     window.addEventListener("mouseup", function () { on = false; });
   })();
 
-  (function resizer() {  // RESIZE_V13
+  (function resizer() {  // RESIZE8_V1：四边 + 四角
     var RECT_KEY = LS_KEY + ".rect";
     try {
       var r = JSON.parse(localStorage.getItem(RECT_KEY) || "null");
       if (r && r.w && r.h) {
         panel.style.width = r.w + "px";
         panel.style.height = r.h + "px";
-        if (r.left != null) { panel.style.left = r.left + "px"; panel.style.top = r.top + "px"; panel.style.right = "auto"; panel.style.bottom = "auto"; }
+        if (r.left != null) {
+          panel.style.left = r.left + "px";
+          panel.style.top = r.top + "px";
+          panel.style.right = "auto";
+          panel.style.bottom = "auto";
+        }
       }
     } catch (e) {}
 
-    var corners = [   // RESIZE4_V1：四角都可拖
-      { pos: "nw", css: "left:0;top:0;cursor:nwse-resize" },
-      { pos: "ne", css: "right:0;top:0;cursor:nesw-resize" },
-      { pos: "sw", css: "left:0;bottom:0;cursor:nesw-resize" },
-      { pos: "se", css: "right:0;bottom:0;cursor:nwse-resize" }
+    var HANDLES = [
+      { dir: "n",  css: "left:12px;right:12px;top:0;height:6px;cursor:ns-resize" },
+      { dir: "s",  css: "left:12px;right:12px;bottom:0;height:6px;cursor:ns-resize" },
+      { dir: "w",  css: "top:12px;bottom:12px;left:0;width:6px;cursor:ew-resize" },
+      { dir: "e",  css: "top:12px;bottom:12px;right:0;width:6px;cursor:ew-resize" },
+      { dir: "nw", css: "left:0;top:0;width:16px;height:16px;cursor:nwse-resize" },
+      { dir: "ne", css: "right:0;top:0;width:16px;height:16px;cursor:nesw-resize" },
+      { dir: "sw", css: "left:0;bottom:0;width:16px;height:16px;cursor:nesw-resize" },
+      { dir: "se", css: "right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize" }
     ];
-    var dragging = false, dir = "se", sx = 0, sy = 0, box = null;
-    corners.forEach(function (c) {
+
+    var dragging = false, dir = "", sx = 0, sy = 0, box = null;
+
+    HANDLES.forEach(function (h) {
       var g = el("div", "resizer");
-      g.style.cssText = "position:absolute;" + c.css + ";width:18px;height:18px;z-index:9999;pointer-events:auto;"
-        + "background:linear-gradient(135deg,transparent 45%,#9fb0c6 45%,#9fb0c6 55%,transparent 55%);opacity:.7";
+      g.style.cssText = "position:absolute;" + h.css + ";z-index:9999;pointer-events:auto;background:transparent";
+      if (h.dir.length === 2) {
+        g.style.background = "linear-gradient(135deg,transparent 45%,#9fb0c6 45%,#9fb0c6 55%,transparent 55%)";
+        g.style.opacity = "0.75";
+      }
       g.title = "拖动调整窗口大小";
       g.addEventListener("mousedown", function (e) {
-        dragging = true; dir = c.pos;
+        dragging = true;
+        dir = h.dir;
         sx = e.clientX; sy = e.clientY;
         var b = panel.getBoundingClientRect();
         box = { left: b.left, top: b.top, w: b.width, h: b.height };
-        e.preventDefault(); e.stopPropagation();
+        e.preventDefault();
+        e.stopPropagation();
       });
       panel.appendChild(g);
     });
+
     window.addEventListener("mousemove", function (e) {
       if (!dragging || !box) return;
       var dx = e.clientX - sx, dy = e.clientY - sy;
@@ -1558,8 +1575,8 @@
       if (dir.indexOf("s") >= 0) h = box.h + dy;
       if (dir.indexOf("w") >= 0) { w = box.w - dx; left = box.left + dx; }
       if (dir.indexOf("n") >= 0) { h = box.h - dy; top = box.top + dy; }
-      w = Math.max(340, Math.min(window.innerWidth - 20, w));
-      h = Math.max(260, Math.min(window.innerHeight - 20, h));
+      w = Math.max(340, Math.min(window.innerWidth - 12, w));
+      h = Math.max(260, Math.min(window.innerHeight - 12, h));
       panel.style.width = w + "px";
       panel.style.height = h + "px";
       panel.style.left = left + "px";
@@ -1567,6 +1584,7 @@
       panel.style.right = "auto";
       panel.style.bottom = "auto";
     });
+
     window.addEventListener("mouseup", function () {
       if (!dragging) return;
       dragging = false;
