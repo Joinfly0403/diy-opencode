@@ -108,6 +108,7 @@
     "border-radius:50%;animation:hudspin .8s linear infinite;vertical-align:-1px}",
     "@keyframes hudspin{to{transform:rotate(360deg)}}",
     ".thinking{color:#6b7280;font-style:italic}",
+    ".btn svg{width:15px;height:15px;display:block}",
     ".resizer{position:absolute;right:0;bottom:0;width:20px;height:20px;cursor:nwse-resize;z-index:6;",
     "background:linear-gradient(135deg,transparent 46%,#9fb0c6 46%,#9fb0c6 54%,transparent 54%,transparent 66%,#9fb0c6 66%,#9fb0c6 74%,transparent 74%);",
     "border-bottom-right-radius:12px;opacity:.85}",
@@ -224,11 +225,19 @@
   modeSel.style.display = "none";
   topRow.appendChild(modelSel); topRow.appendChild(agentSel); topRow.appendChild(modeSel);
 
+  var HUD_SVG = {   // ICON_SVG_V1
+    model: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="12.5" height="12" rx="3"/><circle cx="6.8" cy="10" r="1.05" fill="currentColor" stroke="none"/><circle cx="6.8" cy="14" r="1.05" fill="currentColor" stroke="none"/><circle cx="11.3" cy="12" r="1.05" fill="currentColor" stroke="none"/><path d="M6.8 10 11.3 12M6.8 14 11.3 12"/><path d="M17.4 10.7 19.9 13.2 22.4 10.7"/></svg>',
+    user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="2.6"/><path d="M6.5 19c0-3.1 2.5-5.2 5.5-5.2s5.5 2.1 5.5 5.2"/></svg>',
+    dev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7.5 4.5 12 9 16.5"/><path d="M15 7.5 19.5 12 15 16.5"/><path d="M13.2 6.5 10.8 17.5"/></svg>',
+    perm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 20 5.6v5.6c0 4.9-3.3 9-8 10.3-4.7-1.3-8-5.4-8-10.3V5.6z"/><circle cx="12" cy="11" r="2.2"/><path d="M14.9 11h1.3M12 8.1V6.8M9.1 11H7.8M12 13.9v1.3M14.05 8.95l.92-.92M9.95 8.95l-.92-.92M9.95 13.05l-.92.92M14.05 13.05l.92.92"/></svg>'
+  };
+
   function iconPicker(sel, icon, label) {
     var wrap = el("div");
     wrap.style.cssText = "position:relative;display:inline-flex";
-    var btn = el("button", "btn", icon);
-    btn.style.cssText = "font-size:13px;padding:2px 7px;line-height:1.4";
+    var btn = el("button", "btn", "");
+    btn.innerHTML = icon;
+    btn.style.cssText = "padding:2px 7px;line-height:0;display:inline-flex;align-items:center;justify-content:center";
     btn.title = label + "：" + (sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "");
     var pop = el("div");
     pop.style.cssText = "display:none;position:absolute;bottom:110%;left:0;min-width:150px;max-height:220px;overflow:auto;"
@@ -264,9 +273,9 @@
     return wrap;
   }
 
-  var modelPick = iconPicker(modelSel, "🧠", "模型");
-  var agentPick = iconPicker(agentSel, "👤", "模式");
-  var permPick = iconPicker(modeSel, "🛡", "权限");
+  var modelPick = iconPicker(modelSel, HUD_SVG.model, "模型");
+  var agentPick = iconPicker(agentSel, HUD_SVG.user, "模式");
+  var permPick = iconPicker(modeSel, HUD_SVG.perm, "权限");
   topRow.appendChild(modelPick); topRow.appendChild(agentPick); topRow.appendChild(permPick);
 
   function refreshPickTitles() {
@@ -274,8 +283,11 @@
       var sel = w === modelPick ? modelSel : (w === agentPick ? agentSel : modeSel);
       var txt = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "";
       w.__btn.title = w.__label + "：" + txt;
-      if (w === agentPick) w.__btn.textContent = sel.value === "plan" ? "📋" : "🛠";
-      if (w === permPick) w.__btn.textContent = sel.value === "bypass" ? "⚡" : "🛡";
+      if (w === agentPick) w.__btn.innerHTML = sel.value === "plan" ? HUD_SVG.user : HUD_SVG.dev;
+      if (w === permPick) {
+        w.__btn.innerHTML = HUD_SVG.perm;
+        w.__btn.style.color = sel.value === "bypass" ? "#d64545" : "#5b6478";
+      }
     });
   }
   setInterval(refreshPickTitles, 1500);
