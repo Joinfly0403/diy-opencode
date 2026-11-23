@@ -14,7 +14,7 @@ import tempfile
 import time
 
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,39}$")
-ACTIONS = {"click", "fill", "select", "choose", "check", "press", "wait", "read", "navigate", "sleep", "api", "refresh", "verify"}   # CHOOSE_V1
+ACTIONS = {"click", "fill", "select", "choose", "check", "press", "wait", "read", "navigate", "sleep", "api", "refresh", "reload", "verify"}   # CHOOSE_V1
 TARGET_KEYS = ("label", "text", "placeholder", "ariaLabel", "testId", "selector", "class", "menuKey")
 LIMITS = {"steps": 50, "params": 20, "valueLen": 2000, "macroBytes": 256 * 1024, "macrosPerOwner": 200}
 

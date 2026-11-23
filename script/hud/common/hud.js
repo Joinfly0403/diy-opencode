@@ -2294,7 +2294,8 @@
     var apiSteps = [];
     try { apiSteps = recApiSteps(); } catch (err) { apiSteps = []; }
     if (apiSteps.length) {   // REC_NET_V1：有接口流量就保存接口动作
-      apiSteps = recCorrelate(apiSteps);   // CORRELATE_V1：把上一步响应里的 id 变成占位符
+      apiSteps = recCorrelate(apiSteps);
+      apiSteps.push({ action: "reload" });   // RELOAD_V1：接口执行完刷新前台数据   // CORRELATE_V1：把上一步响应里的 id 变成占位符
       apiSteps.forEach(function (st) {
         var pl = st.payload;
         if (pl && typeof pl === "object" && !Array.isArray(pl)) {
@@ -2726,9 +2727,20 @@
       return r.text().then(function (t) {
         var body = t;
         try { body = t ? JSON.parse(t) : {}; } catch (e) { body = t; }
+        var snippet = String(t).replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 300);
         if (!r.ok) {
-          var snippet = String(t).replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
           throw new Error("API " + method + " " + step.endpoint + " -> " + r.status + ": " + (snippet || "(空响应)"));
+        }
+        // API_BIZ_V1：HTTP 200 但业务失败
+        if (body && typeof body === "object") {
+          var codeVal = body.code !== undefined ? body.code : (body.retCode !== undefined ? body.retCode : body.status);
+          var okFlag = (body.success !== undefined) ? body.success : (body.ok !== undefined ? body.ok : undefined);
+          var bizBad = (codeVal !== undefined && String(codeVal) !== "0" && String(codeVal) !== "200" && String(codeVal).toLowerCase() !== "ok")
+            || okFlag === false;
+          if (bizBad) {
+            var msg = body.message || body.msg || body.messageText || body.desc || "";
+            throw new Error("API " + method + " " + step.endpoint + " 业务失败 code=" + codeVal + " " + msg + " | " + snippet.slice(0, 120));
+          }
         }
         return body;
       });
@@ -2911,7 +2923,9 @@
               outputs["$" + sk] = val;
             }
           }
-          done({ action: "api", method: step.method || "POST", endpoint: step.endpoint, ms: Date.now() - t0, via: "api" });
+          var resSnippet = "";
+          try { resSnippet = JSON.stringify(res).slice(0, 260); } catch (e) { resSnippet = ""; }
+          done({ action: "api", method: step.method || "POST", endpoint: step.endpoint, ms: Date.now() - t0, via: "api", res: resSnippet });
         }));
         return;
       }
@@ -2919,6 +2933,11 @@
         guard(macroWait(step.wait || {}, step.wait && step.wait.timeout).then(function () {
           done({ action: "refresh", ms: Date.now() - t0 });
         }));
+        return;
+      }
+      if (step.action === "reload") {   // RELOAD_V1：让前台重新拉数据
+        done({ action: "reload", ms: Date.now() - t0 });
+        setTimeout(function () { try { location.reload(); } catch (e) {} }, 800);
         return;
       }
       if (step.action === "sleep") {
