@@ -2359,10 +2359,12 @@
       apiSteps.forEach(function (st) {
         var pl = st.payload;
         if (pl && typeof pl === "object" && !Array.isArray(pl)) {
-          ["project_name", "site_name"].forEach(function (k) {
-            if (typeof pl[k] === "string" && pl[k].indexOf("{{") < 0) {
-              pl[k] = String(pl[k]).replace(/_\d{8,14}$/, "").slice(0, 21) + "_{{shortstamp}}";
-            }
+          Object.keys(pl).forEach(function (k) {
+            var lk = String(k).toLowerCase();
+            var isName = /(project|prj|site)name/.test(lk) || /(project|prj|site)_name/.test(lk);
+            if (!isName) return;
+            if (typeof pl[k] !== "string" || pl[k].indexOf("{{") >= 0) return;
+            pl[k] = String(pl[k]).replace(/_\d{8,14}$/, "").slice(0, 21) + "_{{shortstamp}}";
           });
         }
       });
@@ -2746,6 +2748,13 @@
   function macroDeepExpand(v, params, outputs) {
     if (typeof v === "string") {
       var out = macroExpand(v, params);
+      out = out.replace(/\{\{([A-Za-z0-9_]+)\}\}/g, function (m, key) {   // OUT_KEY_V1
+        if (outputs && Object.prototype.hasOwnProperty.call(outputs, key)) {
+          var v0 = outputs[key];
+          return v0 === undefined || v0 === null ? m : String(v0);
+        }
+        return m;
+      });
       return out.replace(/\{\{([A-Za-z0-9_]+)\.([A-Za-z0-9_.\[\]]+)\}\}/g, function (m, as, pathStr) {
         var base = outputs && outputs[as];
         if (base === undefined) return m;
@@ -2989,7 +2998,13 @@
               if (!Object.prototype.hasOwnProperty.call(want, wk)) continue;
               if (String(it[wk]) !== String(want[wk])) { okAll = false; break; }
             }
-            if (okAll) { hit = it; break; }
+            if (okAll) {
+              if (!hit) { hit = it; }
+              else {
+                var a0 = Number(hit[step.pick || "id"]), b0 = Number(it[step.pick || "id"]);
+                if (!isNaN(a0) && !isNaN(b0) && b0 > a0) hit = it;   // LOOKUP_MAX_ID_V1
+              }
+            }
           }
           if (!hit) throw new Error("lookup 未找到匹配项 " + JSON.stringify(want) + " @ " + step.endpoint);
           var picked = macroGetPath(hit, step.pick || "id");
