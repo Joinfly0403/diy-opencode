@@ -419,6 +419,13 @@ class Handler(BaseHTTPRequestHandler):
             limit = int((q.get("limit") or ["20"])[0])
             self.send_json(200, {"runs": MACRO_STORE.list_runs(owner, mid, limit)})
             return
+        if path.startswith("/agent/"):
+            handle, info = self.require_handle()
+            if not info:
+                return
+            self.proxy(path, info, parsed)
+            return
+        self.send_json(404, {"error": "not_found"})
     def do_POST(self):
         parsed = urlparse(self.path)
         path = parsed.path
