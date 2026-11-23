@@ -28,7 +28,7 @@
     "background:#2F6BFF;color:#fff;display:flex;align-items:center;justify-content:center;",
     "font:600 13px/1.2 system-ui,-apple-system,'Segoe UI',sans-serif;cursor:pointer;",
     "box-shadow:0 6px 20px rgba(0,0,0,.28);z-index:2147483000;user-select:none}",
-    ".panel{position:fixed;right:24px;bottom:92px;width:min(760px,92vw);height:min(620px,80vh);resize:both;",
+    ".panel{position:fixed;right:24px;bottom:92px;width:min(760px,92vw);height:min(620px,80vh);",
     "background:#fff;color:#1f2329;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.28);",
     "display:flex;flex-direction:column;overflow:hidden;z-index:2147483001;",
     "font:13px/1.6 system-ui,-apple-system,'Segoe UI',sans-serif}",
@@ -147,7 +147,10 @@
   var spacer = el("span", "sp");
   var minBtn = el("button", "btn", "—");
 
-  hd.appendChild(dot); hd.appendChild(title); hd.appendChild(statusText); hd.appendChild(spacer); hd.appendChild(minBtn);
+  var sideBtn = el("button", "btn", "◧");   // SIDEBAR_TOGGLE_V1
+  sideBtn.title = "隐藏会话列表";
+  sideBtn.style.cssText = "font-size:12px;padding:1px 6px;margin-left:4px";
+  hd.appendChild(dot); hd.appendChild(title); hd.appendChild(statusText); hd.appendChild(spacer); hd.appendChild(sideBtn); hd.appendChild(minBtn);
 
   var spinEl = el("span", "spin");
   spinEl.style.display = "none";
@@ -183,6 +186,24 @@
   listBox.appendChild(searchRow);
   listBox.appendChild(items);
   body.appendChild(listBox);
+
+  (function sidebarToggle() {   // SIDEBAR_TOGGLE_V1
+    var KEY = "cogagent-hud.sidebar";
+    var hidden = false;
+    try { hidden = localStorage.getItem(KEY) === "1"; } catch (e) {}
+    function apply(h) {
+      listBox.style.display = h ? "none" : "";
+      sideBtn.textContent = h ? "◨" : "◧";
+      sideBtn.title = h ? "显示会话列表" : "隐藏会话列表";
+    }
+    apply(hidden);
+    sideBtn.onclick = function (ev) {
+      ev.stopPropagation();
+      hidden = !hidden;
+      apply(hidden);
+      try { localStorage.setItem(KEY, hidden ? "1" : "0"); } catch (e) {}
+    };
+  })();
 
   var chat = el("div", "chat");
   var msgs = el("div", "msgs");
@@ -1508,26 +1529,43 @@
       }
     } catch (e) {}
 
-    var grip = el("div", "resizer");
-    grip.style.zIndex = "9999";
-    grip.style.pointerEvents = "auto";
-    grip.title = "拖动这里调整窗口大小（位置和尺寸会自动记住）";
-    panel.appendChild(grip);
-
-    var dragging = false, sx = 0, sy = 0, sw = 0, sh = 0;
-    grip.addEventListener("mousedown", function (e) {
-      dragging = true;
-      sx = e.clientX; sy = e.clientY;
-      var b = panel.getBoundingClientRect();
-      sw = b.width; sh = b.height;
-      e.preventDefault(); e.stopPropagation();
+    var corners = [   // RESIZE4_V1：四角都可拖
+      { pos: "nw", css: "left:0;top:0;cursor:nwse-resize" },
+      { pos: "ne", css: "right:0;top:0;cursor:nesw-resize" },
+      { pos: "sw", css: "left:0;bottom:0;cursor:nesw-resize" },
+      { pos: "se", css: "right:0;bottom:0;cursor:nwse-resize" }
+    ];
+    var dragging = false, dir = "se", sx = 0, sy = 0, box = null;
+    corners.forEach(function (c) {
+      var g = el("div", "resizer");
+      g.style.cssText = "position:absolute;" + c.css + ";width:18px;height:18px;z-index:9999;pointer-events:auto;"
+        + "background:linear-gradient(135deg,transparent 45%,#9fb0c6 45%,#9fb0c6 55%,transparent 55%);opacity:.7";
+      g.title = "拖动调整窗口大小";
+      g.addEventListener("mousedown", function (e) {
+        dragging = true; dir = c.pos;
+        sx = e.clientX; sy = e.clientY;
+        var b = panel.getBoundingClientRect();
+        box = { left: b.left, top: b.top, w: b.width, h: b.height };
+        e.preventDefault(); e.stopPropagation();
+      });
+      panel.appendChild(g);
     });
     window.addEventListener("mousemove", function (e) {
-      if (!dragging) return;
-      var w = Math.max(320, Math.min(window.innerWidth - 40, sw + e.clientX - sx));
-      var h = Math.max(240, Math.min(window.innerHeight - 40, sh + e.clientY - sy));
+      if (!dragging || !box) return;
+      var dx = e.clientX - sx, dy = e.clientY - sy;
+      var left = box.left, top = box.top, w = box.w, h = box.h;
+      if (dir.indexOf("e") >= 0) w = box.w + dx;
+      if (dir.indexOf("s") >= 0) h = box.h + dy;
+      if (dir.indexOf("w") >= 0) { w = box.w - dx; left = box.left + dx; }
+      if (dir.indexOf("n") >= 0) { h = box.h - dy; top = box.top + dy; }
+      w = Math.max(340, Math.min(window.innerWidth - 20, w));
+      h = Math.max(260, Math.min(window.innerHeight - 20, h));
       panel.style.width = w + "px";
       panel.style.height = h + "px";
+      panel.style.left = left + "px";
+      panel.style.top = top + "px";
+      panel.style.right = "auto";
+      panel.style.bottom = "auto";
     });
     window.addEventListener("mouseup", function () {
       if (!dragging) return;
