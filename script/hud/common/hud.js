@@ -187,24 +187,37 @@
   listBox.appendChild(items);
   body.appendChild(listBox);
 
-  (function sidebarToggle() {   // SIDEBAR_TOGGLE_V2：头部按钮 + 左侧把手
+  (function sidebarToggle() {   // SIDEBAR_TOGGLE_V3：侧边栏与聊天区之间的竖线按钮
     var KEY = "cogagent-hud.sidebar";
     var hidden = false;
     try { hidden = localStorage.getItem(KEY) === "1"; } catch (e) {}
 
-    var sideTab = el("div", "", "‹");
-    sideTab.title = "隐藏 / 显示会话列表";
-    sideTab.style.cssText = "position:absolute;left:0;top:50%;transform:translateY(-50%);width:16px;height:52px;"
-      + "display:flex;align-items:center;justify-content:center;cursor:pointer;background:#eef2f7;color:#5b6478;"
-      + "border:1px solid #dfe4ea;border-left:none;border-radius:0 8px 8px 0;z-index:9998;font-size:13px;user-select:none";
-    panel.appendChild(sideTab);
+    var divider = el("div");
+    divider.title = "隐藏 / 显示会话列表";
+    divider.style.cssText = "position:relative;flex:0 0 7px;cursor:pointer;background:transparent;transition:background .15s";
+    var chev = el("div", "", "‹");
+    chev.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:15px;height:28px;"
+      + "display:flex;align-items:center;justify-content:center;border-radius:7px;background:#eef2f7;"
+      + "border:1px solid #dfe4ea;color:#5b6478;font-size:11px;opacity:0;transition:opacity .15s;pointer-events:none";
+    divider.appendChild(chev);
+    divider.addEventListener("mouseenter", function () {
+      chev.style.opacity = "1";
+      divider.style.background = "#eef2f7";
+    });
+    divider.addEventListener("mouseleave", function () {
+      chev.style.opacity = "0";
+      divider.style.background = "transparent";
+    });
+    body.appendChild(divider);
 
     function apply(h) {
       listBox.style.display = h ? "none" : "";
       sideBtn.textContent = h ? "◨" : "◧";
       sideBtn.title = h ? "显示会话列表" : "隐藏会话列表";
-      sideTab.textContent = h ? "›" : "‹";
-      sideTab.style.left = h ? "0" : "0";
+      chev.textContent = h ? "›" : "‹";
+      if (h) {
+        divider.style.marginLeft = "0";
+      }
     }
     apply(hidden);
 
@@ -214,8 +227,8 @@
       apply(hidden);
       try { localStorage.setItem(KEY, hidden ? "1" : "0"); } catch (e) {}
     }
+    divider.onclick = toggle;
     sideBtn.onclick = toggle;
-    sideTab.onclick = toggle;
   })();
 
   var chat = el("div", "chat");
