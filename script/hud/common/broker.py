@@ -519,7 +519,7 @@ class Handler(BaseHTTPRequestHandler):
                     rec0["endedAt"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
                     rec0["stale"] = True
                     try:
-                        MACRO_STORE.append_run(owner, rec0)
+                        MACRO_STORE.append_run(r0.get("owner") or owner, rec0)   # STALE_OWNER_V1
                     except Exception:
                         pass
                     try:
@@ -599,7 +599,11 @@ class Handler(BaseHTTPRequestHandler):
                         pass
                     MACRO_RUNS.pop(k, None)
                     released.append(k)
-                MACRO_PENDING.pop(owner, None)
+                if rid:
+                    left = [c for c in (MACRO_PENDING.get(owner) or []) if c.get("runId") != rid]
+                    MACRO_PENDING[owner] = left   # CANCEL_SCOPE_V1
+                else:
+                    MACRO_PENDING.pop(owner, None)
             self.send_json(200, {"cancelled": released})
             return
         if path == "/agent/macro/result" and self.macro_ready():
@@ -612,6 +616,9 @@ class Handler(BaseHTTPRequestHandler):
                 entry = MACRO_RUNS.get(rid)
             if not entry:
                 self.send_json(404, {"error": "run_not_found"})
+                return
+            if entry.get("owner") != owner:   # RUN_OWNER_V1
+                self.send_json(403, {"error": "run_forbidden"})
                 return
             rec = entry["record"]
             entry["touched"] = time.time()   # STALE_RUN_V1
