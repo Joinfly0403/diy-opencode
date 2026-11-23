@@ -161,14 +161,22 @@
 
   var listBox = el("div", "list");
   var listTop = el("div", "top");
-  var newBtn = el("button", "btn primary", "+ 新建");
-  listTop.appendChild(newBtn);
+  var newBtn = el("button", "btn primary", "+");   // NEWBTN_ICON_V1
+  newBtn.title = "新建会话";
+  newBtn.style.cssText = "flex:0 0 auto;padding:2px 10px;font-size:15px;line-height:1.2";
   var items = el("div", "items");
   var search = document.createElement("input"); // SEARCH_V39
   search.className = "search";
   search.placeholder = "搜索会话…";
   search.oninput = function () { state.query = search.value.trim(); renderList(); };
-  listBox.appendChild(listTop); listBox.appendChild(search); listBox.appendChild(items);
+  var searchRow = el("div");   // NEWBTN_ICON_V1：搜索框 + "+" 同一行
+  searchRow.style.cssText = "display:flex;gap:6px;align-items:center;padding:4px 8px";
+  search.style.flex = "1 1 auto";
+  searchRow.appendChild(search);
+  searchRow.appendChild(newBtn);
+  listBox.appendChild(listTop);
+  listBox.appendChild(searchRow);
+  listBox.appendChild(items);
   body.appendChild(listBox);
 
   var chat = el("div", "chat");
