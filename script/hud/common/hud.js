@@ -2722,6 +2722,7 @@
     if (method !== "GET" && method !== "HEAD") {
       init.body = typeof payload === "string" ? payload : JSON.stringify(payload);
     }
+    var reqStr = method + " " + url + " " + (init.body ? String(init.body).slice(0, 600) : "");
     return fetch(url, init).then(function (r) {
       return r.text().then(function (t) {
         var body = t;
@@ -2741,7 +2742,7 @@
             throw new Error("API " + method + " " + step.endpoint + " 业务失败 code=" + codeVal + " " + msg + " | " + snippet.slice(0, 120));
           }
         }
-        return body;
+        return { body: body, req: reqStr, status: r.status };
       });
     });
   }
@@ -2911,20 +2912,27 @@
         }));
         return;
       }
-      if (step.action === "api") {   // API_V2
-        guard(macroApiCall(step, params, outputs).then(function (res) {
-          if (step.as) outputs[step.as] = res;
+      if (step.action === "api") {   // API_V3：记录入参 body + 响应
+        guard(macroApiCall(step, params, outputs).then(function (out) {
+          var data = (out && out.body !== undefined) ? out.body : out;
+          var reqStr = (out && out.req) || "";
+          if (step.as) outputs[step.as] = data;
           if (step.save && typeof step.save === "object") {
             for (var sk in step.save) {
               if (!Object.prototype.hasOwnProperty.call(step.save, sk)) continue;
-              var val = macroGetPath(res, step.save[sk]);
+              var val = macroGetPath(data, step.save[sk]);
               outputs[sk] = val;
               outputs["$" + sk] = val;
             }
           }
           var resSnippet = "";
-          try { resSnippet = JSON.stringify(res).slice(0, 260); } catch (e) { resSnippet = ""; }
-          done({ action: "api", method: step.method || "POST", endpoint: step.endpoint, ms: Date.now() - t0, via: "api", res: resSnippet });
+          try { resSnippet = JSON.stringify(data).slice(0, 300); } catch (e) { resSnippet = ""; }
+          console.log("[macro-api] " + reqStr + " => " + resSnippet);
+          done({
+            action: "api", method: step.method || "POST", endpoint: step.endpoint,
+            ms: Date.now() - t0, via: "api",
+            req: reqStr.slice(0, 600), res: resSnippet
+          });
         }));
         return;
       }

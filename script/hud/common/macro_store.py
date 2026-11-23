@@ -253,7 +253,7 @@ class Store:
     def append_run(self, owner, record):
         path = os.path.join(self.runs, owner, time.strftime("%Y-%m") + ".jsonl")
         os.makedirs(os.path.dirname(path), mode=0o750, exist_ok=True)
-        line = json.dumps(record, ensure_ascii=False)[:4096]
+        line = json.dumps(record, ensure_ascii=False)[:20000]
         with open(path, "a", encoding="utf-8") as fh:
             fh.write(line + "\n")
 
