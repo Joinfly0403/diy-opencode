@@ -187,22 +187,35 @@
   listBox.appendChild(items);
   body.appendChild(listBox);
 
-  (function sidebarToggle() {   // SIDEBAR_TOGGLE_V1
+  (function sidebarToggle() {   // SIDEBAR_TOGGLE_V2：头部按钮 + 左侧把手
     var KEY = "cogagent-hud.sidebar";
     var hidden = false;
     try { hidden = localStorage.getItem(KEY) === "1"; } catch (e) {}
+
+    var sideTab = el("div", "", "‹");
+    sideTab.title = "隐藏 / 显示会话列表";
+    sideTab.style.cssText = "position:absolute;left:0;top:50%;transform:translateY(-50%);width:16px;height:52px;"
+      + "display:flex;align-items:center;justify-content:center;cursor:pointer;background:#eef2f7;color:#5b6478;"
+      + "border:1px solid #dfe4ea;border-left:none;border-radius:0 8px 8px 0;z-index:9998;font-size:13px;user-select:none";
+    panel.appendChild(sideTab);
+
     function apply(h) {
       listBox.style.display = h ? "none" : "";
       sideBtn.textContent = h ? "◨" : "◧";
       sideBtn.title = h ? "显示会话列表" : "隐藏会话列表";
+      sideTab.textContent = h ? "›" : "‹";
+      sideTab.style.left = h ? "0" : "0";
     }
     apply(hidden);
-    sideBtn.onclick = function (ev) {
-      ev.stopPropagation();
+
+    function toggle(ev) {
+      if (ev) { ev.stopPropagation(); ev.preventDefault(); }
       hidden = !hidden;
       apply(hidden);
       try { localStorage.setItem(KEY, hidden ? "1" : "0"); } catch (e) {}
-    };
+    }
+    sideBtn.onclick = toggle;
+    sideTab.onclick = toggle;
   })();
 
   var chat = el("div", "chat");
@@ -1505,6 +1518,7 @@
   (function drag() {
     var sx = 0, sy = 0, ox = 0, oy = 0, on = false;
     hd.addEventListener("mousedown", function (e) {
+      if (e.target && e.target.closest && e.target.closest("button")) return;   // 按钮不触发拖拽
       on = true; sx = e.clientX; sy = e.clientY;
       var r = panel.getBoundingClientRect(); ox = r.left; oy = r.top;
       e.preventDefault();
@@ -1551,8 +1565,8 @@
       var g = el("div", "resizer");
       g.style.cssText = "position:absolute;" + h.css + ";z-index:9999;pointer-events:auto;background:transparent";
       if (h.dir.length === 2) {
-        g.style.background = "linear-gradient(135deg,transparent 45%,#9fb0c6 45%,#9fb0c6 55%,transparent 55%)";
-        g.style.opacity = "0.75";
+        g.style.background = "transparent";
+        g.style.opacity = "0";
       }
       g.title = "拖动调整窗口大小";
       g.addEventListener("mousedown", function (e) {
