@@ -1533,6 +1533,19 @@
     panel.style.display = "flex";
     if (!state.handle) renderConnect();
   };
+  ball.ondblclick = function (ev) {   // RESET_RECT_V1：双击恢复默认大小与位置
+    if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+    try { localStorage.removeItem(LS_KEY + ".rect"); } catch (e) {}
+    panel.style.width = "";
+    panel.style.height = "";
+    panel.style.left = "";
+    panel.style.top = "";
+    panel.style.right = "";
+    panel.style.bottom = "";
+    panel.style.display = "flex";
+    if (!state.handle) renderConnect();
+    showToast("已恢复默认大小和位置", "ok");
+  };
 
   (function drag() {
     var sx = 0, sy = 0, ox = 0, oy = 0, on = false;
