@@ -2351,6 +2351,7 @@
       if (i >= steps.length) { finish(true, i, null, 0, { outputs: outputs, via: "ui" }); return; }
       var cur = i + 1;
       var step = steps[i];
+      try { if (typeof annotateNow === "function") annotateNow(); } catch (err) {}   // ANNOTATE_SYNC_V1
       var t0 = Date.now();
       var desc = JSON.stringify(step.target || {});
       var timer = null;
@@ -2380,6 +2381,18 @@
           var list = macroCandidates(step.target);
           var direct = macroResolve(step.target);
           if (direct) list.unshift(direct);
+          if (!list.length) {   // FILL_SINGLE_V1：页面上唯一可见输入框就用它
+            var vis = [];
+            var allIn = document.querySelectorAll("input,textarea");
+            for (var vi = 0; vi < allIn.length; vi++) {
+              var cand0 = allIn[vi];
+              if (!macroVisible(cand0)) continue;
+              if ((cand0.type || "").toLowerCase() === "hidden") continue;
+              if (cand0.disabled || cand0.readOnly) continue;
+              vis.push(cand0);
+            }
+            if (vis.length === 1) list = [vis[0]];
+          }
           var written = null;
           for (var fi = 0; fi < list.length; fi++) {
             var cand = list[fi];
@@ -2389,7 +2402,10 @@
             try { macroFill(cand, want); } catch (e) { continue; }
             if (String(cand.value) === String(want)) { written = cand; break; }
           }
-          if (!written) throw new Error("找不到可写入的输入框 " + desc + "（候选 " + list.length + "）");
+          if (!written) {
+            var vc = document.querySelectorAll("input,textarea").length;
+            throw new Error("找不到可写入的输入框 " + desc + "（候选 " + list.length + "，页面输入框 " + vc + "）");
+          }
           var wtid = written.getAttribute && written.getAttribute("data-hud-id");
           if (wtid) macroPinSet(macroSig(step.target), { testId: wtid });   // PIN_CLIENT_V1
           done();
