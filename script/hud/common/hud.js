@@ -1697,16 +1697,32 @@
     return r.width > 0 && r.height > 0 && st.visibility !== "hidden" && st.display !== "none";
   }
 
+  function macroNorm(t) { return (t || "").replace(/\s+/g, " ").trim(); }
+
   function macroByText(text, cls) {
-    var root = cls ? document.querySelector(cls) : document;
+    var roots = [];
+    var scoped = cls ? document.querySelector(cls) : null;
+    if (scoped) roots.push(scoped);
+    roots.push(document);
+    for (var ri = 0; ri < roots.length; ri++) {
+      var hit = macroByTextIn(macroNorm(text), roots[ri]);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  function macroByTextIn(text, root) {
     if (!root) return null;
-    var nodes = root.querySelectorAll("button,a,span,div,li,td,label,[role=button]");
+    var nodes = root.querySelectorAll("button,a,span,div,li,td,label,[role=button],[role=option],[role=menuitem]");
     var best = null, bestScore = -1, bestArea = Infinity;
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
       if (!macroVisible(n)) continue;
-      var t = (n.innerText || n.textContent || "").trim();
-      if (t !== text && t.indexOf(text) < 0) continue;
+      var t = macroNorm(n.innerText || n.textContent || "");
+      if (t !== text && t.indexOf(text) < 0) {
+        var aria = macroNorm((n.getAttribute && (n.getAttribute("aria-label") || n.getAttribute("title"))) || "");
+        if (!aria || (aria !== text && aria.indexOf(text) < 0)) continue;
+      }
       var r = n.getBoundingClientRect();
       var area = r.width * r.height;
       if (!(area > 0)) continue;
@@ -1768,6 +1784,18 @@
     if (t.placeholder) { var ph = document.querySelector('[placeholder="' + t.placeholder + '"]'); if (ph) return ph; }
     if (t.text) return macroByText(t.text, t.scope);
     return null;
+  }
+
+  function macroResolveWait(t, timeout) {   // MACRO_RESOLVE_WAIT_V1
+    var until = Date.now() + (timeout || 3000);
+    return new Promise(function (resolve) {
+      (function tick() {
+        var el = macroResolve(t);
+        if (el) { resolve(el); return; }
+        if (Date.now() > until) { resolve(null); return; }
+        setTimeout(tick, 150);
+      })();
+    });
   }
 
   function macroHighlight(e) {
@@ -1848,80 +1876,111 @@
     });
   }
 
-  function execMacro(cmd) {
+  function execMacro(cmd) {   // EXEC_V2：目标重试 + 失败带描述
     if (macroRunning) return Promise.resolve();
     macroRunning = true;
     var macro = cmd.macro || {};
     var params = cmd.params || {};
     var steps = macro.steps || [];
     var outputs = {};
-    var i = 0;
+
     macroToast("开始执行：" + (macro.name || macro.id) + "（" + steps.length + " 步）", true);
 
-    function next() {
-      if (i >= steps.length) {
-        macroRunning = false;
-        macroReport(cmd, i, true, { final: true, result: "ok", outputs: outputs, via: "ui" });
-        macroToast("动作完成：" + (macro.name || macro.id), true);
+    function finish(ok, cur, step, ms, extra) {
+      macroRunning = false;
+      var body = { action: step ? step.action : "done", ms: ms, final: true, result: ok ? "ok" : "failed" };
+      if (extra) { for (var k in extra) body[k] = extra[k]; }
+      if (!ok) body.failedStep = cur;
+      macroReport(cmd, cur, ok, body);
+      if (ok) macroToast("动作完成：" + (macro.name || macro.id), true);
+      else macroToast("第 " + cur + " 步失败：" + extra.error);
+    }
+
+    function stepAt(i) {
+      if (i >= steps.length) { finish(true, i, null, 0, { outputs: outputs, via: "ui" }); return; }
+      var cur = i + 1;
+      var step = steps[i];
+      var t0 = Date.now();
+      var desc = JSON.stringify(step.target || {});
+      var timer = null;
+
+      function done(extra) {
+        macroReport(cmd, cur, true, extra || { action: step.action, ms: Date.now() - t0 });
+        setTimeout(function () { stepAt(i + 1); }, step.action === "sleep" ? 0 : 120);
+      }
+      function bad(msg) {
+        finish(false, cur, step, Date.now() - t0, { error: String(msg) });
+      }
+      function guard(promise) {
+        promise.then(function () {}, function (e) { bad((e && e.message) || e); });
+      }
+
+      if (step.action === "click") {
+        guard(macroResolveWait(step.target, 4000).then(function (el) {
+          if (!el) throw new Error("找不到元素 " + desc);
+          macroClick(el); done();
+        }));
         return;
       }
-      var idx = i + 1, step = steps[i++];
-      var t0 = Date.now();
-      var el = (step.action === "click" || step.action === "fill" || step.action === "select" ||
-                step.action === "read" || step.action === "verify") ? macroResolve(step.target) : null;
-
-      var fail = function (msg) {
-        macroRunning = false;
-        macroReport(cmd, idx, false, { action: step.action, ms: Date.now() - t0, error: String(msg), final: true, result: "failed", failedStep: idx });
-        macroToast("第 " + idx + " 步失败：" + msg);
-      };
-
-      try {
-        if (step.action === "click") {
-          if (!el) return fail("找不到元素");
-          macroClick(el);
-        } else if (step.action === "fill") {
-          if (!el) return fail("找不到输入框");
-          macroFill(el, macroExpand(step.value, params));
-        } else if (step.action === "select") {
-          if (!el) return fail("找不到下拉框");
+      if (step.action === "fill") {
+        guard(macroResolveWait(step.target, 4000).then(function (el) {
+          if (!el) throw new Error("找不到输入框 " + desc);
+          macroFill(el, macroExpand(step.value, params)); done();
+        }));
+        return;
+      }
+      if (step.action === "select") {
+        guard(macroResolveWait(step.target, 4000).then(function (el) {
+          if (!el) throw new Error("找不到下拉框 " + desc);
           var v = macroExpand(step.value, params);
           el.value = v;
           el.dispatchEvent(new Event("change", { bubbles: true }));
-        } else if (step.action === "read") {
-          if (!el) return fail("找不到读取目标");
-          outputs[step.as || ("out" + idx)] = (el.innerText || el.value || "").trim().slice(0, 2000);
-        } else if (step.action === "verify") {
-          if (!el) return fail("校验失败：未找到 " + JSON.stringify(step.target));
-        } else if (step.action === "wait") {
-          return macroWait(step.for || {}, step.timeout).then(function () {
-            macroReport(cmd, idx, true, { action: "wait", ms: Date.now() - t0 });
-            setTimeout(next, 300);
-          }).catch(fail);
-        } else if (step.action === "api") {
-          return macroApiCall(step, params).then(function (res) {
-            if (step.as) outputs[step.as] = res;
-            macroReport(cmd, idx, true, { action: "api", ms: Date.now() - t0, via: "api" });
-            setTimeout(next, 300);
-          }).catch(fail);
-        } else if (step.action === "sleep") {
-          return setTimeout(next, step.ms || 300);
-        } else if (step.action === "refresh") {
-          return macroWait(step.wait || {}, step.wait && step.wait.timeout).then(function () {
-            macroReport(cmd, idx, true, { action: "refresh", ms: Date.now() - t0 });
-            setTimeout(next, 300);
-          }).catch(fail);
-        } else {
-          return fail("暂不支持的 action: " + step.action);
-        }
-      } catch (err) {
-        return fail(err && err.message ? err.message : err);
+          done();
+        }));
+        return;
       }
-
-      macroReport(cmd, idx, true, { action: step.action, ms: Date.now() - t0 });
-      setTimeout(next, 300);
+      if (step.action === "read") {
+        guard(macroResolveWait(step.target, 4000).then(function (el) {
+          if (!el) throw new Error("找不到读取目标 " + desc);
+          outputs[step.as || ("out" + cur)] = (el.innerText || el.value || "").trim().slice(0, 2000);
+          done();
+        }));
+        return;
+      }
+      if (step.action === "verify") {
+        guard(macroResolveWait(step.target, 4000).then(function (el) {
+          if (!el) throw new Error("校验失败：未找到 " + desc);
+          done();
+        }));
+        return;
+      }
+      if (step.action === "wait") {
+        guard(macroWait(step.for || {}, step.timeout).then(function () {
+          done({ action: "wait", ms: Date.now() - t0 });
+        }));
+        return;
+      }
+      if (step.action === "api") {
+        guard(macroApiCall(step, params).then(function (res) {
+          if (step.as) outputs[step.as] = res;
+          done({ action: "api", ms: Date.now() - t0, via: "api" });
+        }));
+        return;
+      }
+      if (step.action === "refresh") {
+        guard(macroWait(step.wait || {}, step.wait && step.wait.timeout).then(function () {
+          done({ action: "refresh", ms: Date.now() - t0 });
+        }));
+        return;
+      }
+      if (step.action === "sleep") {
+        setTimeout(function () { done({ action: "sleep", ms: step.ms || 0 }); }, step.ms || 300);
+        return;
+      }
+      bad("暂不支持的 action: " + step.action);
     }
-    next();
+
+    stepAt(0);
     return Promise.resolve();
   }
 
