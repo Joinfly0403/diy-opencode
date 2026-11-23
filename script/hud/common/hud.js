@@ -1829,6 +1829,94 @@
 
   var recLastClick = null;   // CHOOSE_REC_V1
 
+  var recNet = [];   // REC_NET_V1：录制期间抓 REST 请求
+  var recNetWrapped = false;
+
+  function recNetPush(item) {
+    if (!recording) return;
+    recNet.push(item);
+    if (recNet.length > 200) recNet.shift();
+  }
+
+  function recNetStart() {
+    if (recNetWrapped) { recNet = []; return; }
+    recNetWrapped = true;
+    recNet = [];
+    var of = window.fetch;
+    if (of) {
+      window.fetch = function (input, init) {
+        var url = typeof input === "string" ? input : ((input && input.url) || "");
+        var method = ((init && init.method) || (input && input.method) || "GET").toUpperCase();
+        var body = init && init.body;
+        var roar = "";
+        try {
+          var hh = init && init.headers;
+          if (hh) {
+            if (typeof hh.get === "function") roar = hh.get("roarand") || "";
+            else for (var hk2 in hh) { if (String(hk2).toLowerCase() === "roarand") roar = hh[hk2]; }
+          }
+        } catch (e) {}
+        var p = of.apply(this, arguments);
+        try {
+          p.then(function (r) {
+            try {
+              r.clone().text().then(function (t) {
+                recNetPush({ method: method, url: url, body: body ? String(body) : "", resp: String(t || "").slice(0, 4000), status: r.status, roarand: roar });
+              }).catch(function () {});
+            } catch (e) {}
+          }).catch(function () {});
+        } catch (e) {}
+        return p;
+      };
+    }
+    var oo = XMLHttpRequest.prototype.open;
+    var os = XMLHttpRequest.prototype.send;
+    var orh = XMLHttpRequest.prototype.setRequestHeader;
+    XMLHttpRequest.prototype.setRequestHeader = function (k, v) {
+      try { if (String(k).toLowerCase() === "roarand") this.__hudRoar = v; } catch (e) {}
+      return orh.apply(this, arguments);
+    };
+    XMLHttpRequest.prototype.open = function (m, u) { this.__hudNet = { m: m, u: u }; return oo.apply(this, arguments); };
+    XMLHttpRequest.prototype.send = function (b) {
+      var self = this;
+      try {
+        self.addEventListener("load", function () {
+          var h = self.__hudNet || {};
+          recNetPush({ method: (h.m || "GET").toUpperCase(), url: h.u || "", body: b ? String(b) : "", resp: String(self.responseText || "").slice(0, 4000), status: self.status, roarand: self.__hudRoar || "" });
+        });
+      } catch (e) {}
+      return os.apply(this, arguments);
+    };
+  }
+
+  function recApiSteps() {
+    var steps = [];
+    var rows = recNet.filter(function (r) { return /\/rest\/ossdesign\/v1\/designer\//.test(r.url || "") && r.method !== "OPTIONS"; });
+    rows.forEach(function (r) {
+      var m = String(r.url).match(/\/rest\/ossdesign\/v1\/designer\/([^?#]+)(\?[^#]*)?/);
+      if (!m) return;
+      var endpoint = "/rest/ossdesign/v1/designer/" + m[1];
+      var step = { action: "api", method: r.method, endpoint: endpoint };
+      if (m[2]) {
+        var q = {};
+        m[2].slice(1).split("&").forEach(function (kv) {
+          if (!kv) return;
+          var i = kv.indexOf("=");
+          var k = decodeURIComponent(i < 0 ? kv : kv.slice(0, i));
+          var v = i < 0 ? "" : decodeURIComponent(kv.slice(i + 1));
+          q[k] = v;
+        });
+        step.query = q;
+      }
+      if (r.body) {
+        try { step.payload = JSON.parse(r.body); } catch (e) { step.payload = r.body; }
+      }
+      if (r.roarand) step.headers = { roarand: r.roarand };
+      steps.push(step);
+    });
+    return steps;
+  }
+
   function recIsOption(el) {   // OPTION_DETECT_V2
     var n = el, depth = 0;
     while (n && n.nodeType === 1 && n !== document.body && depth++ < 5) {
@@ -1919,6 +2007,7 @@
 
   function startRecord() {
     recSteps = []; pendingFill = []; recording = true; renderRecCount();
+    try { recNetStart(); } catch (err) {}   // REC_NET_V1
     recHandlers = { click: onRecClick, input: onRecInput, change: onRecChange };
     document.addEventListener("click", onRecClick, true);
     document.addEventListener("input", onRecInput, true);
@@ -1952,10 +2041,27 @@
       return x;
     });
 
+    var apiSteps = [];
+    try { apiSteps = recApiSteps(); } catch (err) { apiSteps = []; }
+    if (apiSteps.length) {   // REC_NET_V1：有接口流量就保存接口动作
+      apiSteps.forEach(function (st) {
+        var pl = st.payload;
+        if (pl && typeof pl === "object" && !Array.isArray(pl)) {
+          ["project_name", "site_name"].forEach(function (k) {
+            if (typeof pl[k] === "string" && pl[k].indexOf("{{") < 0) {
+              pl[k] = String(pl[k]).replace(/_\d{8,14}$/, "").slice(0, 21) + "_{{shortstamp}}";
+            }
+          });
+        }
+      });
+      recSteps = apiSteps;
+    }
+
     var preview = recSteps.map(function (x, i) {
+      if (x.action === "api") return (i + 1) + ". api " + (x.method || "POST") + " " + x.endpoint + " " + JSON.stringify(x.payload || x.query || {});
       return (i + 1) + ". " + x.action + " " + JSON.stringify(x.target || {}) + (x.value ? " = " + x.value : "");
     }).join("\n");
-    console.log("[录制结果]\n" + preview);
+    console.log("[录制结果]\n" + preview + "\n（接口步骤 " + apiSteps.length + " 条，UI 步骤 " + recSteps.filter(function (x) { return x.action !== "api"; }).length + " 条）");
     var name = window.prompt("动作名称（可在工具栏一键回放；\n录制步骤已打印到 Console）", "录制动作 " + new Date().toLocaleTimeString());
     if (!name) { showToast("已取消保存"); return; }
     var id = "rec-" + Date.now().toString(36);
@@ -2314,16 +2420,63 @@
     return out;
   }
 
-  function macroApiCall(step, params) {
+  function macroGetPath(obj, pathStr) {   // API_V2
+    if (!pathStr) return obj;
+    var cur = obj;
+    var parts = String(pathStr).split(".");
+    for (var i = 0; i < parts.length; i++) {
+      if (cur == null) return undefined;
+      cur = cur[parts[i]];
+    }
+    return cur;
+  }
+
+  function macroDeepExpand(v, params, outputs) {
+    if (typeof v === "string") {
+      var out = macroExpand(v, params);
+      return out.replace(/\{\{([A-Za-z0-9_]+)\.([A-Za-z0-9_.\[\]]+)\}\}/g, function (m, as, pathStr) {
+        var base = outputs && outputs[as];
+        if (base === undefined) return m;
+        var got = macroGetPath(base, pathStr);
+        return got === undefined || got === null ? m : String(got);
+      });
+    }
+    if (Array.isArray(v)) return v.map(function (x) { return macroDeepExpand(x, params, outputs); });
+    if (v && typeof v === "object") {
+      var o = {};
+      for (var k in v) { if (Object.prototype.hasOwnProperty.call(v, k)) o[k] = macroDeepExpand(v[k], params, outputs); }
+      return o;
+    }
+    return v;
+  }
+
+  function macroApiCall(step, params, outputs) {
     var headers = { "Content-Type": "application/json" };
+    var extra = step.headers || {};
+    for (var hk in extra) { if (Object.prototype.hasOwnProperty.call(extra, hk)) headers[hk] = extra[hk]; }
     if (window.common && window.common.csrfToken) headers["roarand"] = window.common.csrfToken;
-    return fetch(step.endpoint, {
-      method: "POST", credentials: "same-origin", headers: headers,
-      body: JSON.stringify(step.payload || {})
-    }).then(function (r) {
+    var method = String(step.method || "POST").toUpperCase();
+    var payload = macroDeepExpand(step.payload === undefined ? {} : step.payload, params, outputs);
+    var url = step.endpoint;
+    var query = macroDeepExpand(step.query || {}, params, outputs);
+    var pairs = [];
+    for (var qk in query) {
+      if (Object.prototype.hasOwnProperty.call(query, qk) && query[qk] !== undefined && query[qk] !== null) {
+        pairs.push(encodeURIComponent(qk) + "=" + encodeURIComponent(String(query[qk])));
+      }
+    }
+    if (pairs.length) url += (url.indexOf("?") >= 0 ? "&" : "?") + pairs.join("&");
+
+    var init = { method: method, credentials: "same-origin", headers: headers };
+    if (method !== "GET" && method !== "HEAD") {
+      init.body = typeof payload === "string" ? payload : JSON.stringify(payload);
+    }
+    return fetch(url, init).then(function (r) {
       return r.text().then(function (t) {
-        if (!r.ok) throw new Error("API " + r.status + ": " + t.slice(0, 200));
-        return t ? JSON.parse(t) : {};
+        var body = t;
+        try { body = t ? JSON.parse(t) : {}; } catch (e) { body = t; }
+        if (!r.ok) throw new Error("API " + method + " " + step.endpoint + " -> " + r.status + ": " + String(t).slice(0, 200));
+        return body;
       });
     });
   }
@@ -2488,10 +2641,18 @@
         }));
         return;
       }
-      if (step.action === "api") {
-        guard(macroApiCall(step, params).then(function (res) {
+      if (step.action === "api") {   // API_V2
+        guard(macroApiCall(step, params, outputs).then(function (res) {
           if (step.as) outputs[step.as] = res;
-          done({ action: "api", ms: Date.now() - t0, via: "api" });
+          if (step.save && typeof step.save === "object") {
+            for (var sk in step.save) {
+              if (!Object.prototype.hasOwnProperty.call(step.save, sk)) continue;
+              var val = macroGetPath(res, step.save[sk]);
+              outputs[sk] = val;
+              outputs["$" + sk] = val;
+            }
+          }
+          done({ action: "api", method: step.method || "POST", endpoint: step.endpoint, ms: Date.now() - t0, via: "api" });
         }));
         return;
       }
