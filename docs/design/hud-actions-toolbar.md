@@ -407,3 +407,326 @@ if step.danger:
 | 1 | 批量参数来源（CSV 逐行）是否纳入一期 | 暂定二期 |
 | 2 | 动作能否跨服务器共享 | 暂定同服务器内共享 |
 | 3 | 截图留证是否默认开启 | 暂定关闭（DOM 摘要替代） |
+
+---
+
+## 16. 代码落点（改哪些文件）
+
+| 文件 | 类型 | 改动 |
+|---|---|---|
+| script/hud/common/macro_store.py | 新增 | 动作与执行记录的读写、校验、版本、审计（纯 stdlib） |
+| script/hud/common/broker.py | 修改 | 挂 8 个 /agent/macro/* 路由；SSE 增加 macro.command 事件；结果写审计 + 合成消息 |
+| script/hud/common/hud_proxy.py | 修改 | ROUTES 白名单加 macro/* 8 条 |
+| script/hud/common/hud.js | 修改 | 工具栏渲染、执行器、录制器、SSE 指令处理、重新附着（标记 MACRO_V1） |
+| packages/core/src/tool/plugin/macro.ts | 新增 | macro_list / macro_run / macro_edit / macro_delete 四个工具 |
+| packages/core/src/tool/macro-client.ts | 新增 | 调 broker 的 HTTP 客户端（127.0.0.1:18765，X-Hud-Account） |
+| packages/schema/src/config/flag.ts | 修改 | 新增 flag: macro |
+| packages/schema/src/config/config.ts | 修改 | 新增 config.macro（enabled / brokerUrl / requireApply） |
+| script/hud/test/macro-store-test.sh | 新增 | macro_store.py 单测 + 审计格式校验 |
+| script/hud/test/macro-exec-test.mjs | 新增 | 执行器纯函数（定位评分、变量展开、DSL 校验）单测 |
+| docs/hud-handover.md | 修改 | 新增第 13 章“动作工具栏”运维说明 |
+
+## 17. 接口契约（broker）
+
+### 17.1 通用约定
+
+| 项 | 约定 |
+|---|---|
+| 基址 | http://127.0.0.1:18765 |
+| 身份（HUD 调用） | 头 X-Hud-Handle: <handle>（既有机制） |
+| 身份（cogagent 工具调用） | 头 X-Hud-Account: <account>；**仅接受来自 127.0.0.1 的请求** |
+| 编码 | JSON UTF-8；请求/响应均 application/json |
+| 错误体 | {"error":"<code>","detail":"<可读信息>"} |
+| 超时 | 普通接口 10s；run 接口立即返回（异步执行） |
+
+### 17.2 错误码
+
+| code | HTTP | 含义 |
+|---|---|---|
+| macro_not_found | 404 | 动作不存在或已删除且未恢复 |
+| macro_invalid | 400 | DSL 校验失败（steps 为空/未知 action/target 缺失） |
+| macro_conflict | 409 | 名称冲突（同 owner 同名同版本） |
+| macro_busy | 409 | 该账号已有 run 在执行 |
+| hud_not_attached | 503 | 该账号没有在线 HUD，无法执行页面动作 |
+| run_not_found | 404 | runId 不存在 |
+| forbidden | 403 | 跨账号访问他人 private 动作 |
+
+### 17.3 端点明细
+
+#### GET /agent/macro/list
+
+```
+query: scope=all|mine|shared  q=<关键字>
+resp:  { "macros": [ { "id","name","version","scope","owner","description","pinned","order" } ] }
+```
+
+#### GET /agent/macro/get?id=<id>
+
+```
+resp:  { "macro": { ...完整 Macro... } }            // 含 steps/params/versionHistory
+```
+
+#### POST /agent/macro/save
+
+```
+body:  { "macro": { ...Macro... }, "mode": "create|update|upsert" }
+resp:  { "id", "version", "diff": { "added","removed","changed" } }
+规则:  update 时 version+1；写审计（actor=提交者）；名称冲突→macro_conflict
+```
+
+#### POST /agent/macro/delete
+
+```
+body:  { "id": "...", "hard": false }
+resp:  { "deleted": true, "hard": false }
+规则:  默认软删除（deletedAt 置时间）；hard=true 物理删除；写审计
+```
+
+#### POST /agent/macro/run
+
+```
+body:  { "id": "...", "params": {...}, "count": 1, "trigger": "user|ai", "sessionID": "ses_..." }
+resp:  { "runId": "run_...", "accepted": true }
+规则:  同账号同时只允许 1 个 run（macro_busy）；无在线 HUD → hud_not_attached
+       count>1 时按批量循环，runId 复用，seq 自增
+```
+
+#### POST /agent/macro/result
+
+```
+body:  { "runId", "step": 3, "ok": true, "ms": 210, "error": null, "outputs": {...} }
+resp:  { "ok": true }
+规则:  逐步上报；最终一步带 "final": true 与 result=ok|failed|cancelled
+```
+
+#### POST /agent/macro/attach
+
+```
+body:  { "runId", "url", "title" }
+resp:  { "resume": true, "step": 4, "macro": {...} }   // 让新页面 HUD 从第 4 步继续
+```
+
+#### GET /agent/macro/runs?id=<id>&limit=20
+
+```
+resp:  { "runs": [ {...Run...} ] }
+```
+
+## 18. broker ↔ HUD 指令协议（SSE 复用）
+
+现有 SSE：GET /agent/events?handle=... （每账号一条流）。新增事件类型：
+
+```json
+{
+  "type": "macro.command",
+  "data": {
+    "runId": "run_...",
+    "macro": { ...Macro... },
+    "params": { "siteName": "XX-...-01" },
+    "count": 1,
+    "seq": 1,
+    "sessionID": "ses_...",
+    "slowMode": true,
+    "deadline": 1750000000
+  }
+}
+```
+| 事件 | 方向 | 说明 |
+|---|---|---|
+| macro.command | broker → HUD | 下发执行指令 |
+| macro.ack | HUD → broker（HTTP /result step=0） | 收到指令 |
+| macro.progress | HUD → broker（HTTP /result） | 每步结果 |
+| macro.attached | HUD → broker（HTTP /attach） | 导航后重新附着 |
+| macro.finished | HUD → broker（HTTP /result final） | 结束 |
+
+## 19. 执行器算法（HUD 侧）
+
+### 19.1 主循环伪代码
+
+```
+async function runMacro(cmd):
+  for (i = startStep; i < steps.length; i++):
+    step = steps[i]
+    if (step.danger && permissionMode != 'bypass'):
+       if (!await confirmDialog(step, i)) -> report(cancelled); return
+    el = await resolveTarget(step.target, timeout=5000)
+    if (!el) -> report(failed, i, 'target_not_found'); return
+    highlight(el); if (slowMode) await sleep(300)
+    switch (step.action):
+      click:   await scrollIntoView(el); await dispatchClick(el)
+      fill:    await setValue(el, expand(step.value)); 
+      select:  await selectOption(el, expand(step.value))
+      check:   await setChecked(el, step.value)
+      press:   await pressKey(el, step.key)
+      wait:    await waitFor(step.for, step.timeout)
+      read:    outputs[step.as] = readValue(el)
+      navigate: report(i); await goto(step.url); return 'detached' // 走重新附着
+    report(i, ok)
+  report(final, ok)
+```
+
+### 19.2 元素定位（5 级回退 + 评分）
+
+```
+candidates = []
+if (target.label)      candidates += byLabel(target.label)
+if (target.text&&role) candidates += byRoleText(target.role, target.text)
+if (target.placeholder)candidates += byPlaceholder(target.placeholder)
+if (target.ariaLabel)  candidates += byAria(target.ariaLabel)
+if (target.testId)     candidates += byTestId(target.testId)
+if (target.selector)   candidates += qsa(target.selector)
+filter: visible && !disabled && inDocument
+score:  exact text match +30, role match +20, 面积大 +10, 靠近视口中心 +5
+取 score 最高且唯一；并列 → 返回错误 + 候选清单(最多 5 条)
+排除: HUD 自身 shadow root 内的元素
+```
+
+### 19.3 真实输入（兼容 React/Vue 受控组件）
+
+```
+const setter = Object.getOwnPropertyDescriptor(el.constructor.prototype, 'value').set;
+setter.call(el, value);
+el.dispatchEvent(new Event('input', { bubbles: true }));
+el.dispatchEvent(new Event('change', { bubbles: true }));
+// 若元素是 contenteditable：改用 document.execCommand('insertText')
+```
+点击：`pointerdown → mousedown → pointerup → mouseup → click`，坐标取 `getBoundingClientRect()` 中心，元素中心被遮挡时改用四角试探。
+
+### 19.4 等待条件
+
+| for | 实现 |
+|---|---|
+| { text } | MutationObserver + 每 250ms 兜底扫描，匹配可见文本 |
+| { selector } | querySelector 轮询 + visible 判断 |
+| { urlPattern } | 轮询 location.href |
+| { request } | 包一层 fetch/XHR，匹配 URL 且完成 |
+| { idle: 500 } | DOM 静默 500ms |
+
+### 19.5 重新附着
+
+```
+// 跳转前
+sessionStorage['hud.run'] = JSON.stringify({runId, step});
+// 新页面 boot
+const pending = JSON.parse(sessionStorage['hud.run'] || 'null');
+if (pending) POST /attach {runId, url, title} -> {resume, step, macro}
+  resume=true  -> 用返回的 macro 从 step 继续执行
+  resume=false -> 清理 sessionStorage，上报 failed('attach_rejected')
+sessionStorage.removeItem('hud.run') 仅在结束后
+```
+
+## 20. cogagent 工具实现
+
+### 20.1 文件与注册
+
+```ts
+// packages/core/src/tool/plugin/macro.ts
+export const Plugin = {
+  id: "opencode.tool.macro",
+  effect: Effect.fn(function* (ctx) {
+    const flags = yield* Flag.resolver
+    yield* ctx.tool.transform((editor) => {
+      if (!flags(entries).macro.enabled) return;
+      editor.add({ name: "macro_list", options: { namespace: "macro", codemode: true }, ... });
+      editor.add({ name: "macro_run",  options: { namespace: "macro", codemode: true }, ... });
+      editor.add({ name: "macro_edit", options: { namespace: "macro", codemode: true }, ... });
+      editor.add({ name: "macro_delete", options: { namespace: "macro", codemode: true }, ... });
+    });
+  }),
+}
+```
+模型看到的工具名：macro_list / macro_run / macro_edit / macro_delete（namespace 拍平）。
+
+### 20.2 输入/输出 Schema
+
+| 工具 | Input | Output |
+|---|---|---|
+| macro_list | { query?: string, scope?: "all"\|"mine"\|"shared" } | { macros: Array<{id,name,version,scope,owner,description}> } |
+| macro_run | { id?: string, name?: string, params?: Record<string,string>, count?: int } | { runId, result, steps: Array<{i,action,ok,ms}>, outputs?, error? } |
+| macro_edit | { id?: string, name: string, patch?: object, macro?: object } | { id, version, diff } |
+| macro_delete | { id?: string, name?: string, hard?: boolean } | { deleted, hard } |
+
+### 20.3 身份与权限
+
+| 项 | 实现 |
+|---|---|
+| 账号识别 | 进程环境 COGAGENT_ROOT=/srv/cogagent/users/<account> → basename |
+| 调用 broker | http://127.0.0.1:18765，头 X-Hud-Account |
+| 工具权限 | permission.assert({ action: "macro", resources: [macroId 或 "*"], ...invocation }) |
+| 危险步骤确认 | 由 HUD 执行器按会话权限模式判断（工具不重复确认） |
+| 失败映射 | macro_busy/hud_not_attached → ToolFailure（可读中文） |
+
+### 20.4 合成消息（用户手动执行 → AI 感知）
+
+```
+POST {upstream}/api/session/{sessionID}/synthetic
+{
+  "text": "【动作执行】新建站点 v3（用户触发）...结果：成功（4.2s）...",
+  "description": "macro_run_result",
+  "resume": false
+}
+```
+| 项 | 说明 |
+|---|---|
+| sessionID 来源 | /agent/macro/run 入参（HUD 报告当前会话）；AI 触发时由工具带入 |
+| 时机 | 最终结果（ok/failed/cancelled）时发一条，逐步不发 |
+| 长度 | ≤ 1500 字符，超长截断 steps 明细 |
+
+## 21. 配置与开关
+
+| 位置 | 键 | 默认 | 说明 |
+|---|---|---|---|
+| cogagent config | macro.enabled | true | 工具集总开关（flag: macro） |
+| cogagent config | macro.brokerUrl | http://127.0.0.1:18765 | broker 地址 |
+| cogagent config | macro.requireApply | false | true = AI 编辑需用户点“应用” |
+| broker 配置文件 | /var/lib/cogagent-hud/macro.json | 见下 | 服务端默认值 |
+| broker 配置文件 | slowMode | true | 慢速模式默认 |
+| broker 配置文件 | stepDelayMs | 300 | 每步间隔 |
+| broker 配置文件 | runTimeoutMs | 120000 | 单次 run 超时 |
+| broker 配置文件 | maxSteps | 50 | 单动作最多步骤 |
+| broker 配置文件 | maxMacrosPerOwner | 200 | 单账号动作上限 |
+
+## 22. 数据校验与限额
+
+| 字段 | 规则 |
+|---|---|
+| id | ^[a-z0-9][a-z0-9-]{1,39}$，唯一 |
+| name | 1–40 字符，同 owner 内唯一 |
+| steps | 1–50 条；action ∈ DSL 集合 |
+| target | 至少含 label/text/placeholder/ariaLabel/testId/selector 之一 |
+| value 长度 | ≤ 2000 字符 |
+| params | ≤ 20 个；每个 value/template ≤ 500 字符 |
+| 文件大小 | 单动作 JSON ≤ 256 KB |
+| 审计行 | ≤ 4 KB（超长截断 outputs） |
+
+## 23. 测试计划
+
+| 层 | 文件 | 覆盖 |
+|---|---|---|
+| 存储单测 | script/hud/test/macro-store-test.sh | 增删改查、版本+1、软删/硬删、审计行格式、校验与限额、并发写 |
+| 执行器单测 | script/hud/test/macro-exec-test.mjs | 变量展开（日期/序号/随机）、定位评分、DSL 校验、确认策略矩阵 |
+| 桥/接口 | script/hud/test/macro-api-test.sh | 8 个端点（用 mock upstream）+ 错误码 + busy/not_attached |
+| 安装回归 | script/hud/test/mock-install-test.sh | 保证新增文件被装到 tools/、桥白名单生效（扩展 3 条断言） |
+| 真机 e2e | 手动 | 验收用例 1–11（§14） |
+
+## 24. PR 拆分（可直接开工）
+
+| PR | 内容 | 文件 | 验收 |
+|---|---|---|---|
+| PR1 | 动作存储 + 校验 + 审计 | common/macro_store.py、test/macro-store-test.sh | 单测全绿 |
+| PR2 | broker 8 端点 + SSE 指令 + 合成消息 | common/broker.py、test/macro-api-test.sh | 端点契约测试通过 |
+| PR3 | HUD 工具栏 + 执行器（含高亮/慢速/暂停/确认/重新附着） | common/hud.js、hud_proxy.py | 手动跑通“新建站点”动作 |
+| PR4 | cogagent 四个工具 + flag/config | tool/plugin/macro.ts、tool/macro-client.ts、schema config/flag | 对话里能 macro_list/macro_run |
+| PR5 | 录制器 + AI 编辑落盘 + 文档 | common/hud.js、docs/hud-handover.md | 录制→保存→重放；AI 改动作后版本+1 |
+
+每个 PR 的完成定义：语法检查通过（bash -n / py_compile / node --check / bun typecheck）、相关测试通过、`mock-install-test.sh` 不回归。
+
+## 25. 风险与回滚
+
+| 风险 | 影响 | 缓解 | 回滚 |
+|---|---|---|---|
+| HUD 执行影响用户页面 | 误点/误填 | 高亮+慢速+暂停；danger 确认 | 关闭宏功能（flag off） |
+| 动作与页面漂移 | 执行失败 | 5 级定位回退 + 失败候选清单 | 编辑/重录动作 |
+| SSE 断线导致 run 悬挂 | 状态不一致 | deadline + 客户端心跳；超时置 failed | 重启 broker（状态重建） |
+| broker 存储损坏 | 动作丢失 | 写临时文件 + 原子 rename；每日备份 | 从备份恢复 macros/ |
+| AI 误删动作 | 数据丢失 | 默认软删除 + 版本历史 | 恢复 deletedAt / 回滚版本 |
