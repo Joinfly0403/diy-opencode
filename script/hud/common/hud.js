@@ -1850,12 +1850,16 @@
     });
     renderRecCount();
     if (!recSteps.length) { showToast("没有录到任何操作"); return; }
-    recSteps = recSteps.map(function (x) {   // NAME_TS_V1：项目/站点名称追加 _{时间戳}
+    recSteps = recSteps.map(function (x) {   // NAME_TS_V2：合法命名（字母数字_-），_短时间戳，总长≤32
       if (x.action !== "fill" || !x.value) return x;
       var lab = (x.target && (x.target.label || "")) || "";
       if (!/名称/.test(lab)) return x;
-      if (String(x.value).indexOf("{{") >= 0) return x;
-      x.value = String(x.value) + "_{{datetime}}";
+      var raw = String(x.value);
+      if (raw.indexOf("{{") >= 0) return x;
+      var base = raw.replace(/[^A-Za-z0-9_-]/g, "");
+      if (!base) base = /站点/.test(lab) ? "site" : "prj";
+      base = base.slice(0, 16);
+      x.value = base + "_{{shortstamp}}";
       return x;
     });
 
@@ -2102,6 +2106,8 @@
       .replace(/\{\{date\}\}/g, date)
       .replace(/\{\{time\}\}/g, time)
       .replace(/\{\{datetime\}\}/g, date + "-" + time)
+      .replace(/\{\{stamp\}\}/g, date + time)
+      .replace(/\{\{shortstamp\}\}/g, date.slice(2) + time.slice(0, 4))
       .replace(/\{\{seq:(\d+)\}\}/g, function (_, n) { return String(params.__seq || 1).padStart(parseInt(n, 10), "0"); })
       .replace(/\{\{rand:(\d+)\}\}/g, function (_, n) { return Math.random().toString(16).slice(2, 2 + parseInt(n, 10)); });
     Object.keys(params || {}).forEach(function (k) {
