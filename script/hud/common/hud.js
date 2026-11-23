@@ -187,49 +187,7 @@
   listBox.appendChild(items);
   body.appendChild(listBox);
 
-  (function sidebarToggle() {   // SIDEBAR_TOGGLE_V3：侧边栏与聊天区之间的竖线按钮
-    var KEY = "cogagent-hud.sidebar";
-    var hidden = false;
-    try { hidden = localStorage.getItem(KEY) === "1"; } catch (e) {}
 
-    var divider = el("div");
-    divider.title = "隐藏 / 显示会话列表";
-    divider.style.cssText = "position:relative;flex:0 0 7px;cursor:pointer;background:transparent;transition:background .15s";
-    var chev = el("div", "", "‹");
-    chev.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:15px;height:28px;"
-      + "display:flex;align-items:center;justify-content:center;border-radius:7px;background:#eef2f7;"
-      + "border:1px solid #dfe4ea;color:#5b6478;font-size:11px;opacity:0;transition:opacity .15s;pointer-events:none";
-    divider.appendChild(chev);
-    divider.addEventListener("mouseenter", function () {
-      chev.style.opacity = "1";
-      divider.style.background = "#eef2f7";
-    });
-    divider.addEventListener("mouseleave", function () {
-      chev.style.opacity = "0";
-      divider.style.background = "transparent";
-    });
-    body.appendChild(divider);
-
-    function apply(h) {
-      listBox.style.display = h ? "none" : "";
-      sideBtn.textContent = h ? "◨" : "◧";
-      sideBtn.title = h ? "显示会话列表" : "隐藏会话列表";
-      chev.textContent = h ? "›" : "‹";
-      if (h) {
-        divider.style.marginLeft = "0";
-      }
-    }
-    apply(hidden);
-
-    function toggle(ev) {
-      if (ev) { ev.stopPropagation(); ev.preventDefault(); }
-      hidden = !hidden;
-      apply(hidden);
-      try { localStorage.setItem(KEY, hidden ? "1" : "0"); } catch (e) {}
-    }
-    divider.onclick = toggle;
-    sideBtn.onclick = toggle;
-  })();
 
   var chat = el("div", "chat");
   var msgs = el("div", "msgs");
@@ -331,7 +289,60 @@
   crow.appendChild(input); crow.appendChild(stopBtn); crow.appendChild(sendCol);
   composer.appendChild(topRow); composer.appendChild(crow);  // LAYOUT_V25
   chat.appendChild(msgs); chat.appendChild(composer);
+
   body.appendChild(chat);
+
+  (function sidebarToggle() {   // SIDEBAR_TOGGLE_V4：分隔缝按钮 + 收起后的回位按钮
+    var KEY = "cogagent-hud.sidebar";
+    var hidden = false;
+    try { hidden = localStorage.getItem(KEY) === "1"; } catch (e) {}
+
+    var divider = el("div");
+    divider.title = "隐藏 / 显示会话列表";
+    divider.style.cssText = "position:relative;flex:0 0 7px;cursor:pointer;background:transparent;transition:background .15s";
+    var chev = el("div", "", "‹");
+    chev.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:15px;height:28px;"
+      + "display:flex;align-items:center;justify-content:center;border-radius:7px;background:#eef2f7;"
+      + "border:1px solid #dfe4ea;color:#5b6478;font-size:11px;opacity:0;transition:opacity .15s;pointer-events:none";
+    divider.appendChild(chev);
+    divider.addEventListener("mouseenter", function () {
+      chev.style.opacity = "1";
+      divider.style.background = "#eef2f7";
+    });
+    divider.addEventListener("mouseleave", function () {
+      chev.style.opacity = "0";
+      divider.style.background = "transparent";
+    });
+    body.insertBefore(divider, chat);
+
+    try { if (getComputedStyle(chat).position === "static") chat.style.position = "relative"; } catch (e) {}
+
+    var restoreBtn = el("div", "", "›");
+    restoreBtn.title = "显示会话列表";
+    restoreBtn.style.cssText = "position:absolute;top:8px;left:8px;width:20px;height:28px;display:none;"
+      + "align-items:center;justify-content:center;border-radius:7px;background:#eef2f7;border:1px solid #dfe4ea;"
+      + "color:#5b6478;font-size:12px;cursor:pointer;z-index:20";
+    chat.appendChild(restoreBtn);
+
+    function apply(h) {
+      listBox.style.display = h ? "none" : "";
+      divider.style.display = h ? "none" : "";
+      restoreBtn.style.display = h ? "flex" : "none";
+      sideBtn.textContent = h ? "◨" : "◧";
+      sideBtn.title = h ? "显示会话列表" : "隐藏会话列表";
+    }
+    apply(hidden);
+
+    function toggle(ev) {
+      if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+      hidden = !hidden;
+      apply(hidden);
+      try { localStorage.setItem(KEY, hidden ? "1" : "0"); } catch (e) {}
+    }
+    divider.onclick = toggle;
+    restoreBtn.onclick = toggle;
+    sideBtn.onclick = toggle;
+  })();
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
