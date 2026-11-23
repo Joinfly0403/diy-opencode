@@ -1746,6 +1746,15 @@
     recSteps.push(step);
   }
 
+  var recLastClick = null;   // CHOOSE_REC_V1
+
+  function recIsOption(el) {
+    if (!el || !el.className) return false;
+    var cn = el.className.toString();
+    return /eui_popup_option|select_option|dropdown_item|menu_item/i.test(cn)
+      || !!(el.closest && el.closest("[id^='eui_popup_']"));
+  }
+
   function onRecClick(ev) {
     if (!recording) return;
     var e = ev.target;
@@ -1753,7 +1762,22 @@
     var tag = (e.tagName || "").toLowerCase();
     if (tag === "input" || tag === "textarea" || tag === "select") return;
     recFlushFill();
-    recPush({ action: "click", target: recTarget(e) });
+    if (recIsOption(e) && recLastClick) {
+      var optText = hudText(e).slice(0, 20);
+      var idx = recSteps.lastIndexOf(recLastClick);
+      if (idx >= 0 && optText) {
+        if (recSteps[idx + 1] && recSteps[idx + 1].action === "sleep") recSteps.splice(idx, 2);
+        else recSteps.splice(idx, 1);
+        recSteps.push({ action: "choose", target: recLastClick.target, option: optText });
+        recSteps.push({ action: "sleep", ms: 300 });
+        recLastClick = null;
+        renderRecCount();
+        return;
+      }
+    }
+    var clickStep = { action: "click", target: recTarget(e) };
+    recPush(clickStep);
+    recLastClick = clickStep;
     recSteps.push({ action: "sleep", ms: 350 });
     renderRecCount();
   }
@@ -1987,6 +2011,15 @@
     return null;
   }
 
+  function macroResolveRecover(t, timeout) {   // RECOVER_V1：找不到时先按 Esc 解遮挡再重试
+    return macroResolveWait(t, timeout || 4000).then(function (el) {
+      if (el) return el;
+      try { macroPress(document.body, "Escape"); } catch (err) {}
+      return new Promise(function (res) { setTimeout(res, 400); })
+        .then(function () { return macroResolveWait(t, 2000); });
+    });
+  }
+
   function macroResolveWait(t, timeout) {   // MACRO_RESOLVE_WAIT_V1
     var until = Date.now() + (timeout || 3000);
     return new Promise(function (resolve) {
@@ -2124,6 +2157,7 @@
         setTimeout(function () { stepAt(i + 1); }, step.action === "sleep" ? 0 : 120);
       }
       function bad(msg) {
+        if (step.optional) { done({ action: step.action, skipped: true, ms: Date.now() - t0 }); return; }
         finish(false, cur, step, Date.now() - t0, { error: String(msg) });
       }
       function guard(promise) {
@@ -2131,16 +2165,34 @@
       }
 
       if (step.action === "click") {
-        guard(macroResolveWait(step.target, 4000).then(function (el) {
+        guard(macroResolveRecover(step.target, 4000).then(function (el) {
           if (!el) throw new Error("找不到元素 " + desc);
           macroClick(el); done();
         }));
         return;
       }
       if (step.action === "fill") {
-        guard(macroResolveWait(step.target, 4000).then(function (el) {
+        guard(macroResolveRecover(step.target, 4000).then(function (el) {
           if (!el) throw new Error("找不到输入框 " + desc);
           macroFill(el, macroExpand(step.value, params)); done();
+        }));
+        return;
+      }
+      if (step.action === "choose") {   // CHOOSE_V1：一次完成"打开下拉 + 选中选项"
+        guard(macroResolveRecover(step.target, 4000).then(function (el) {
+          if (!el) {
+            if (step.optional) { done({ action: "choose", skipped: true, ms: Date.now() - t0 }); return; }
+            throw new Error("找不到下拉框 " + JSON.stringify(step.target || {}));
+          }
+          try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (err) {}
+          macroClick(el);
+          return macroWait({ text: step.option }, step.timeout || 6000).then(function () {
+            var opt = macroByText(step.option, ".eui-dialog-box,[class*=popup],[class*=dropdown],[class*=select]")
+                   || macroByText(step.option);
+            if (!opt) throw new Error("下拉选项未出现：" + step.option);
+            macroClick(opt);
+            done({ action: "choose", option: step.option, ms: Date.now() - t0 });
+          });
         }));
         return;
       }

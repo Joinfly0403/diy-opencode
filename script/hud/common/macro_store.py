@@ -14,7 +14,7 @@ import tempfile
 import time
 
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,39}$")
-ACTIONS = {"click", "fill", "select", "check", "press", "wait", "read", "navigate", "sleep", "api", "refresh", "verify"}
+ACTIONS = {"click", "fill", "select", "choose", "check", "press", "wait", "read", "navigate", "sleep", "api", "refresh", "verify"}   # CHOOSE_V1
 TARGET_KEYS = ("label", "text", "placeholder", "ariaLabel", "testId", "selector", "class", "menuKey")
 LIMITS = {"steps": 50, "params": 20, "valueLen": 2000, "macroBytes": 256 * 1024, "macrosPerOwner": 200}
 
@@ -109,11 +109,11 @@ class Store:
             act = step.get("action")
             if act not in ACTIONS:
                 raise MacroError("macro_invalid", "第 %d 步 action 非法: %s" % (i, act))
-            if act in ("click", "fill", "select", "check", "press", "read", "verify"):
+            if act in ("click", "fill", "select", "choose", "check", "press", "read", "verify"):
                 target = step.get("target") or {}
                 if not any(k in target for k in TARGET_KEYS):
                     raise MacroError("macro_invalid", "第 %d 步缺少 target 定位字段" % i)
-            if act in ("fill", "select") and len(str(step.get("value", ""))) > LIMITS["valueLen"]:
+            if act in ("fill", "select", "choose") and len(str(step.get("value") or step.get("option") or "")) > LIMITS["valueLen"]:
                 raise MacroError("macro_invalid", "第 %d 步 value 过长" % i)
             if act == "api":
                 ep = step.get("endpoint") or ""
