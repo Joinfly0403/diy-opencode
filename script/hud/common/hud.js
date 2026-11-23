@@ -1666,10 +1666,12 @@
     );
     var list = [];
     for (var i = 0; i < nodes.length; i++) {
-      var el = nodes[i];
-      if (el.closest && el.closest('[id^="cogagent-hud-host"]')) continue;
-      var base = hudIdFor(el);
-      if (base) list.push([el, base]);
+      try {   // ANNOTATE_SAFE_V1：单个元素异常不中断整轮
+        var el = nodes[i];
+        if (el.closest && el.closest('[id^="cogagent-hud-host"]')) continue;
+        var base = hudIdFor(el);
+        if (base) list.push([el, base]);
+      } catch (err) {}
     }
     var counts = {};
     for (var ci = 0; ci < list.length; ci++) {
@@ -2371,6 +2373,11 @@
       if (step.action === "click") {
         guard(macroResolveRecover(step.target, 4000).then(function (el) {
           if (!el) throw new Error("找不到元素 " + desc);
+          var ctid = el.getAttribute && el.getAttribute("data-hud-id");   // PIN_CLICK_V1
+          if (ctid && !macroPinFor(step.target)) {
+            macroPinSet(macroSig(step.target), { testId: ctid });
+            macroToast("已记住定位：" + ctid, "ok");
+          }
           macroClick(el); done();
         }));
         return;
