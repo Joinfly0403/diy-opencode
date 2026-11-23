@@ -1544,20 +1544,46 @@
     return best;
   }
 
+  function macroVisibleInputs(root) {   // FIELD_RESOLVE_V1
+    var scope = root || document;
+    var nodes = scope.querySelectorAll("input,textarea,select");
+    var out = [];
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      if (!macroVisible(el)) continue;
+      if (el.type === "hidden") continue;
+      out.push(el);
+    }
+    return out;
+  }
+
   function macroResolve(t) {
     if (!t) return null;
     if (t.class) { var c = document.querySelector("." + t.class); if (c) return c; }
     if (t.selector) { var q = document.querySelector(t.selector); if (q) return q; }
     if (t.label) {
-      var labels = document.querySelectorAll("label,.el-form-item__label,.ant-form-item-label");
+      var labels = document.querySelectorAll("label,.el-form-item__label,.ant-form-item-label,.eui-form-label-required,[class*=form-label]");
       for (var i = 0; i < labels.length; i++) {
-        if ((labels[i].innerText || "").trim().indexOf(t.label) >= 0) {
-          var f = labels[i].getAttribute("for");
-          if (f) { var el2 = document.getElementById(f); if (el2) return el2; }
-          var p = labels[i].parentElement;
-          if (p) { var inp = p.querySelector("input,textarea,select"); if (inp) return inp; }
+        var lt = (labels[i].innerText || "").trim();
+        if (lt.indexOf(t.label) < 0) continue;
+        var f = labels[i].getAttribute("for");
+        if (f) { var el2 = document.getElementById(f); if (el2) return el2; }
+        var node = labels[i];
+        for (var up = 0; up < 5 && node; up++) {          // 逐级向上找输入框
+          var inp = node.querySelector && node.querySelector("input,textarea,select");
+          if (inp && macroVisible(inp)) return inp;
+          var cands = macroVisibleInputs(node);
+          if (cands.length === 1) return cands[0];
+          node = node.parentElement;
         }
       }
+      var dialog = document.querySelector(".eui-dialog-box,[class*=dialog],[class*=modal]");
+      if (dialog) {
+        var only = macroVisibleInputs(dialog);
+        if (only.length === 1) return only[0];
+      }
+      var all = macroVisibleInputs(document);
+      if (all.length === 1) return all[0];
     }
     if (t.placeholder) { var ph = document.querySelector('[placeholder="' + t.placeholder + '"]'); if (ph) return ph; }
     if (t.text) return macroByText(t.text, t.scope);
