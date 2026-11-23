@@ -108,8 +108,10 @@
     "border-radius:50%;animation:hudspin .8s linear infinite;vertical-align:-1px}",
     "@keyframes hudspin{to{transform:rotate(360deg)}}",
     ".thinking{color:#6b7280;font-style:italic}",
-    ".resizer{position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;",
-    "background:linear-gradient(135deg,transparent 50%,#c9ced6 50%);border-bottom-right-radius:12px}",
+    ".resizer{position:absolute;right:0;bottom:0;width:20px;height:20px;cursor:nwse-resize;z-index:6;",
+    "background:linear-gradient(135deg,transparent 46%,#9fb0c6 46%,#9fb0c6 54%,transparent 54%,transparent 66%,#9fb0c6 66%,#9fb0c6 74%,transparent 74%);",
+    "border-bottom-right-radius:12px;opacity:.85}",
+    ".resizer:hover{opacity:1;background-color:#eef3ff}",
     "height:100%;text-align:center;color:#4b5563}"
   ].join("");
 
@@ -194,8 +196,68 @@
     op.value = o[0]; op.textContent = o[1];
     agentSel.appendChild(op);
   });
-  var topRow = el("div", "crow");
+  var topRow = el("div", "crow");   // ICONPICK_V1
+  modelSel.style.display = "none";
+  agentSel.style.display = "none";
+  modeSel.style.display = "none";
   topRow.appendChild(modelSel); topRow.appendChild(agentSel); topRow.appendChild(modeSel);
+
+  function iconPicker(sel, icon, label) {
+    var wrap = el("div");
+    wrap.style.cssText = "position:relative;display:inline-flex";
+    var btn = el("button", "btn", icon);
+    btn.style.cssText = "font-size:13px;padding:2px 7px;line-height:1.4";
+    btn.title = label + "：" + (sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "");
+    var pop = el("div");
+    pop.style.cssText = "display:none;position:absolute;bottom:110%;left:0;min-width:150px;max-height:220px;overflow:auto;"
+      + "background:#fff;border:1px solid #dfe4ea;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:4px;z-index:10";
+    function refresh() {
+      pop.innerHTML = "";
+      for (var i = 0; i < sel.options.length; i++) {
+        var op = sel.options[i];
+        var item = el("div", "", (sel.value === op.value ? "✓ " : "\u00a0\u00a0") + op.textContent);
+        item.style.cssText = "padding:4px 8px;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap;"
+          + (sel.value === op.value ? "background:#eef3ff;color:#1b4bd8" : "");
+        item.onmouseenter = function () { this.style.background = "#f2f5fa"; };
+        item.onmouseleave = function () { this.style.background = sel.value === op.value ? "#eef3ff" : "transparent"; };
+        (function (value) {
+          item.onclick = function () {
+            sel.value = value;
+            try { sel.dispatchEvent(new Event("change")); } catch (e) {}
+            pop.style.display = "none";
+            btn.title = label + "：" + (sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "");
+          };
+        })(op.value);
+        pop.appendChild(item);
+      }
+    }
+    btn.onclick = function (ev) {
+      ev.stopPropagation();
+      refresh();
+      pop.style.display = pop.style.display === "none" ? "block" : "none";
+    };
+    wrap.addEventListener("mouseleave", function () { setTimeout(function () { pop.style.display = "none"; }, 250); });
+    wrap.appendChild(btn); wrap.appendChild(pop);
+    wrap.__btn = btn; wrap.__pop = pop; wrap.__label = label;
+    return wrap;
+  }
+
+  var modelPick = iconPicker(modelSel, "🧠", "模型");
+  var agentPick = iconPicker(agentSel, "👤", "模式");
+  var permPick = iconPicker(modeSel, "🛡", "权限");
+  topRow.appendChild(modelPick); topRow.appendChild(agentPick); topRow.appendChild(permPick);
+
+  function refreshPickTitles() {
+    [modelPick, agentPick, permPick].forEach(function (w) {
+      var sel = w === modelPick ? modelSel : (w === agentPick ? agentSel : modeSel);
+      var txt = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "";
+      w.__btn.title = w.__label + "：" + txt;
+      if (w === agentPick) w.__btn.textContent = sel.value === "plan" ? "📋" : "🛠";
+      if (w === permPick) w.__btn.textContent = sel.value === "bypass" ? "⚡" : "🛡";
+    });
+  }
+  setInterval(refreshPickTitles, 1500);
+  setTimeout(refreshPickTitles, 300);
   var stopBtn = el("button", "btn", "■");   // STOP_MOVE_V46
   stopBtn.title = "中断当前执行";
   stopBtn.style.display = "none";
@@ -1434,6 +1496,7 @@
     } catch (e) {}
 
     var grip = el("div", "resizer");
+    grip.title = "拖动这里调整窗口大小（位置和尺寸会自动记住）";
     panel.appendChild(grip);
 
     var dragging = false, sx = 0, sy = 0, sw = 0, sh = 0;
