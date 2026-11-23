@@ -324,6 +324,7 @@
         save();
         loadSessions();
         connectSSE();
+        macroStart();   // MACRO_BOOT_V2
         return;
       }
       if (d.state === "failed") {
@@ -337,6 +338,7 @@
 
   function loadSessions() {
     api("/sessions").then(function (d) {
+      if (typeof macroStart === "function") macroStart();   // MACRO_BOOT_V2
       var arr = (d && d.data) || [];
       state.sessions = arr.map(function (s) {
         if (!state.usage) state.usage = {};
@@ -1729,6 +1731,10 @@
     if (macroPollTimer) return;
     loadMacros();
     macroPollTimer = setInterval(macroPoll, 1500);
+  }
+
+  function macroRefreshIfEmpty() {   // MACRO_BOOT_V2
+    if (!macroBar.children.length) loadMacros();
   }
 
   window.__hudMacro = {
