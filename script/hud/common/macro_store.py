@@ -84,7 +84,8 @@ class Store:
 
     def get(self, owner, macro_id):
         idx = self._load_index()
-        item = next((m for m in idx.get("macros", []) if m.get("id") == macro_id), None)
+        item = next((m for m in idx.get("macros", [])
+                     if m.get("id") == macro_id and (m.get("owner") == owner or m.get("scope", "private") != "private")), None)  # PER_OWNER_ID_V1
         if not item or item.get("deletedAt"):
             raise MacroError("macro_not_found")
         if item.get("scope", "private") == "private" and item.get("owner") != owner:
@@ -130,10 +131,8 @@ class Store:
         self.validate(macro)
         idx = self._load_index()
         mid = macro["id"]
-        item = next((m for m in idx.get("macros", []) if m.get("id") == mid), None)
-
-        if item and item.get("owner") != owner and item.get("scope", "private") == "private":
-            raise MacroError("forbidden")
+        item = next((m for m in idx.get("macros", [])
+                     if m.get("id") == mid and m.get("owner") == owner), None)   # PER_OWNER_ID_V1
         if item and item.get("deletedAt") and mode != "create":
             item.pop("deletedAt", None)
         if mode == "create" and item and not item.get("deletedAt"):
@@ -195,11 +194,10 @@ class Store:
 
     def delete(self, owner, macro_id, hard=False, actor=None):
         idx = self._load_index()
-        item = next((m for m in idx.get("macros", []) if m.get("id") == macro_id), None)
+        item = next((m for m in idx.get("macros", [])
+                     if m.get("id") == macro_id and m.get("owner") == owner), None)   # PER_OWNER_ID_V1
         if not item:
             raise MacroError("macro_not_found")
-        if item.get("owner") != owner and item.get("scope", "private") == "private":
-            raise MacroError("forbidden")
         path = os.path.join(self.macros, item["owner"], macro_id + ".json")
         if hard:
             try:
@@ -211,6 +209,37 @@ class Store:
             item["deletedAt"] = _now()
         self._save_index(idx)
         return {"deleted": True, "hard": bool(hard)}
+
+    def migrate(self, old_owner, new_owner, actor=None):
+        """把某账号名下的动作整体迁移到另一个 owner（网页账户接管时用）。"""
+        if not old_owner or not new_owner or old_owner == new_owner:
+            return 0
+        idx = self._load_index()
+        moved = 0
+        for item in idx.get("macros", []):
+            if item.get("owner") != old_owner:
+                continue
+            mid = item.get("id")
+            src = os.path.join(self.macros, old_owner, mid + ".json")
+            dst = os.path.join(self.macros, new_owner, mid + ".json")
+            try:
+                with open(src, encoding="utf-8") as fh:
+                    body = json.load(fh)
+            except OSError:
+                continue
+            body["owner"] = new_owner
+            body["updatedAt"] = _now()
+            _atomic_write(dst, json.dumps(body, ensure_ascii=False, indent=1))
+            try:
+                os.unlink(src)
+            except OSError:
+                pass
+            item["owner"] = new_owner
+            item["updatedAt"] = body["updatedAt"]
+            moved += 1
+        if moved:
+            self._save_index(idx)
+        return moved
 
     # ---------- 执行记录 ----------
     def start_run(self, owner, macro_id, version, params, trigger):
