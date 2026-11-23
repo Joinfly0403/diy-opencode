@@ -1517,6 +1517,46 @@
   }
 
   // ===== ANNOTATE_V1：运行时稳定标识（只加内存属性，刷新即消失）=====
+  var hudVKey = "";   // INULA_V1
+
+  function hudVNode(el) {
+    var node = el;
+    while (node && node.nodeType === 1) {
+      if (hudVKey && node[hudVKey]) return node[hudVKey];
+      var keys = Object.keys(node);
+      for (var i = 0; i < keys.length; i++) {
+        if (keys[i].indexOf("vNode") >= 0 && node[keys[i]] && node[keys[i]].props) {
+          hudVKey = keys[i];
+          return node[keys[i]];
+        }
+      }
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function hudFieldName(el) {
+    var v = hudVNode(el);
+    var node = v, depth = 0;
+    while (node && depth++ < 12) {
+      var pr = node.props || {};
+      var n = pr.name || pr.field || pr.prop || pr.dataKey;
+      if (n && typeof n === "string") return n;
+      node = node.parent;
+    }
+    return "";
+  }
+
+  function hudTestType(el) {
+    var n = el, depth = 0;
+    while (n && n.nodeType === 1 && depth++ < 4) {
+      var v = n.getAttribute && n.getAttribute("data-test-type");
+      if (v) return v;
+      n = n.parentElement;
+    }
+    return "";
+  }
+
   function hudText(el) {
     if (!el) return "";
     return ((el.innerText || el.textContent || "") + "").replace(/\s+/g, " ").trim();
@@ -1563,6 +1603,10 @@
 
   function hudIdFor(el) {
     var parts = [];
+    var __field = hudFieldName(el);
+    if (__field) parts.push("field=" + __field);
+    var __tt = hudTestType(el);
+    if (__tt) parts.push("tt=" + __tt);
     var dlg = hudDialogTitle(el);
     if (dlg) parts.push("dlg=" + dlg);
     var treeA = el.closest ? el.closest("a[id^='eui_tree_node_id']") : null;
@@ -1850,10 +1894,11 @@
     });
     renderRecCount();
     if (!recSteps.length) { showToast("没有录到任何操作"); return; }
-    recSteps = recSteps.map(function (x) {   // NAME_TS_V3：仅"项目名称/站点名称"自动追加 _时间戳
+    recSteps = recSteps.map(function (x) {   // NAME_TS_V4：按 field=project_name/site_name 或 label 判定
       if (x.action !== "fill" || !x.value) return x;
-      var lab = (x.target && (x.target.label || "")) || "";
-      if (!/项目名称|站点名称/.test(lab)) return x;
+      var sig = JSON.stringify(x.target || {});
+      var isNameField = /field=(project_name|site_name)([|"}]|$)/.test(sig) || /项目名称|站点名称/.test(sig);
+      if (!isNameField) return x;
       var raw = String(x.value);
       if (raw.indexOf("{{") >= 0) return x;
       var suffix = "_{{shortstamp}}";        // 展开后是 _ + yyMMddHHmm（11 字符）
