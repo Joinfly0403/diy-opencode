@@ -3158,40 +3158,54 @@
         }));
         return;
       }
-      if (step.action === "lookup") {   // LOOKUP_V1：按名称查 id，解决"新建对象 id 未知"
-        guard(macroApiCall({
-          method: step.method || "POST", endpoint: step.endpoint,
-          payload: step.payload || {}, headers: step.headers || {}
-        }, params, outputs).then(function (out) {
-          var data = (out && out.body !== undefined) ? out.body : out;
-          var arr = macroGetPath(data, step.from || "");
-          if (!Array.isArray(arr)) throw new Error("lookup 未拿到列表 " + (step.from || "") + " @ " + step.endpoint);
-          var want = macroDeepExpand(step.where || {}, params, outputs);
-          var hit = null;
-          for (var li = 0; li < arr.length; li++) {
-            var it = arr[li], okAll = true;
-            for (var wk in want) {
-              if (!Object.prototype.hasOwnProperty.call(want, wk)) continue;
-              if (String(it[wk]) !== String(want[wk])) { okAll = false; break; }
-            }
-            if (okAll) {
-              if (!hit) { hit = it; }
-              else {
-                var a0 = Number(hit[step.pick || "id"]), b0 = Number(it[step.pick || "id"]);
-                if (!isNaN(a0) && !isNaN(b0) && b0 > a0) hit = it;   // LOOKUP_MAX_ID_V1
+      if (step.action === "lookup") {   // LOOKUP_V2：规范化比较 + 失败重试 3 次
+        var attempt = 0;
+        function runLookup() {
+          attempt++;
+          return macroApiCall({
+            method: step.method || "POST", endpoint: step.endpoint,
+            payload: step.payload || {}, headers: step.headers || {}
+          }, params, outputs).then(function (out) {
+            var data = (out && out.body !== undefined) ? out.body : out;
+            var arr = macroGetPath(data, step.from || "");
+            if (!Array.isArray(arr)) throw new Error("lookup 未拿到列表 " + (step.from || "") + " @ " + step.endpoint);
+            var want = macroDeepExpand(step.where || {}, params, outputs);
+            var norm = function (x) { return String(x == null ? "" : x).replace(/\s+/g, "").trim(); };
+            var hit = null;
+            for (var li = 0; li < arr.length; li++) {
+              var it = arr[li], okAll = true;
+              for (var wk in want) {
+                if (!Object.prototype.hasOwnProperty.call(want, wk)) continue;
+                if (norm(it[wk]) !== norm(want[wk])) { okAll = false; break; }
+              }
+              if (okAll) {
+                if (!hit) { hit = it; }
+                else {
+                  var a0 = Number(hit[step.pick || "id"]), b0 = Number(it[step.pick || "id"]);
+                  if (!isNaN(a0) && !isNaN(b0) && b0 > a0) hit = it;
+                }
               }
             }
-          }
-          if (!hit) throw new Error("lookup 未找到匹配项 " + JSON.stringify(want) + " @ " + step.endpoint);
-          var picked = macroGetPath(hit, step.pick || "id");
-          var wantsNum = /_id$/.test(String(step.as || "")) || /_id$/.test(String(step.pick || ""));   // LOOKUP_NUMERIC_V1
-          if (wantsNum && (picked === undefined || picked === null || String(picked).trim() === "" || isNaN(Number(picked)))) {
-            throw new Error("lookup 得到非数字 id: " + JSON.stringify(picked) + "（as=" + step.as + "）");
-          }
-          outputs[step.as || "lookup"] = picked;
-          console.log("[macro-lookup] " + step.endpoint + " " + JSON.stringify(want) + " => " + step.as + "=" + picked);
-          done({ action: "lookup", endpoint: step.endpoint, ms: Date.now() - t0, res: JSON.stringify(hit).slice(0, 200) });
-        }));
+            if (!hit) {
+              if (attempt < 3) {
+                console.log("[macro-lookup] 未命中，重试 " + attempt + "/3");
+                return new Promise(function (res) { setTimeout(res, 700); }).then(runLookup);
+              }
+              var k0 = Object.keys(want)[0] || "text";
+              var sample = arr.slice(0, 12).map(function (x) { return String(x[k0]); }).join(" | ");
+              throw new Error("lookup 未找到匹配项 " + JSON.stringify(want) + " @ " + step.endpoint + "；列表前 12 项=" + sample);
+            }
+            var picked = macroGetPath(hit, step.pick || "id");
+            var wantsNum = /_id$/.test(String(step.as || "")) || /_id$/.test(String(step.pick || ""));
+            if (wantsNum && (picked === undefined || picked === null || String(picked).trim() === "" || isNaN(Number(picked)))) {
+              throw new Error("lookup 得到非数字 id: " + JSON.stringify(picked) + "（as=" + step.as + "）");
+            }
+            outputs[step.as || "lookup"] = picked;
+            console.log("[macro-lookup] " + step.endpoint + " " + JSON.stringify(want) + " => " + step.as + "=" + picked);
+            done({ action: "lookup", endpoint: step.endpoint, ms: Date.now() - t0, res: JSON.stringify(hit).slice(0, 200) });
+          });
+        }
+        guard(runLookup());
         return;
       }
       if (step.action === "api" && step.endpoint && step.endpoint.indexOf("/hud/") >= 0) {
