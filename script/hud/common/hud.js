@@ -2471,8 +2471,8 @@
       if (!isNameField) return x;
       var raw = String(x.value);
       if (raw.indexOf("{{") >= 0) return x;
-      var suffix = "_{{shortstamp}}";        // 展开后是 _ + yyMMddHHmm（11 字符）
-      var maxBase = 32 - 11;                  // 保证总长 ≤ 32
+      var suffix = "_{{shortstamp}}";        // 展开后是 _ + yyMMddHHmmss（13 字符含下划线）
+      var maxBase = 32 - 13;                  // 基础名 19 + _ + 12 位时间戳 ≤ 32
       x.value = raw.slice(0, maxBase) + suffix;
       return x;
     });
@@ -2489,7 +2489,7 @@
             var isName = /(project|prj|site)name/.test(lk) || /(project|prj|site)_name/.test(lk);
             if (!isName) return;
             if (typeof pl[k] !== "string" || pl[k].indexOf("{{") >= 0) return;
-            pl[k] = String(pl[k]).replace(/_\d{8,14}$/, "").slice(0, 21) + "_{{shortstamp}}";
+            pl[k] = String(pl[k]).replace(/_\d{8,14}$/, "").slice(0, 19) + "_{{shortstamp}}";   // base19 + _ + 12 = 32
           });
         }
       });
@@ -2857,7 +2857,7 @@
       .replace(/\{\{time\}\}/g, time)
       .replace(/\{\{datetime\}\}/g, date + "-" + time)
       .replace(/\{\{stamp\}\}/g, date + time)
-      .replace(/\{\{shortstamp\}\}/g, date.slice(2) + time.slice(0, 4))
+      .replace(/\{\{shortstamp\}\}/g, date.slice(2) + time)
       .replace(/\{\{seq:(\d+)\}\}/g, function (_, n) { return String(params.__seq || 1).padStart(parseInt(n, 10), "0"); })
       .replace(/\{\{rand:(\d+)\}\}/g, function (_, n) { return Math.random().toString(16).slice(2, 2 + parseInt(n, 10)); });
     Object.keys(params || {}).forEach(function (k) {
