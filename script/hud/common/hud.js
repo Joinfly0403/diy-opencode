@@ -2846,18 +2846,33 @@
     });
   }
 
-  function macroExpand(v, params) {
-    if (typeof v !== "string") return v;
+  var macroClock = null;   // CLOCK_FREEZE_V1：一次执行内时间戳固定，避免跨秒导致名字与 lookup 不一致
+
+  function macroNowParts() {
+    if (macroClock) return macroClock;
     var d = new Date();
     var pad = function (n) { return (n < 10 ? "0" : "") + n; };
     var date = "" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate());
     var time = "" + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+    return {
+      date: date, time: time,
+      datetime: date + "-" + time,
+      stamp: date + time,
+      shortstamp: date.slice(2) + time
+    };
+  }
+
+  function macroExpand(v, params) {
+    if (typeof v !== "string") return v;
+    var c = macroNowParts();
+    var date = c.date;
+    var time = c.time;
     var out = v
       .replace(/\{\{date\}\}/g, date)
       .replace(/\{\{time\}\}/g, time)
-      .replace(/\{\{datetime\}\}/g, date + "-" + time)
-      .replace(/\{\{stamp\}\}/g, date + time)
-      .replace(/\{\{shortstamp\}\}/g, date.slice(2) + time)
+      .replace(/\{\{datetime\}\}/g, c.datetime)
+      .replace(/\{\{stamp\}\}/g, c.stamp)
+      .replace(/\{\{shortstamp\}\}/g, c.shortstamp)
       .replace(/\{\{seq:(\d+)\}\}/g, function (_, n) { return String(params.__seq || 1).padStart(parseInt(n, 10), "0"); })
       .replace(/\{\{rand:(\d+)\}\}/g, function (_, n) { return Math.random().toString(16).slice(2, 2 + parseInt(n, 10)); });
     Object.keys(params || {}).forEach(function (k) {
@@ -2964,6 +2979,7 @@
     var steps = macro.steps || [];
     var outputs = {};
 
+    macroClock = (function () { var d = new Date(); var pad = function (n) { return (n < 10 ? "0" : "") + n; }; var dt = "" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()); var tm = "" + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()); return { date: dt, time: tm, datetime: dt + "-" + tm, stamp: dt + tm, shortstamp: dt.slice(2) + tm }; })();
     macroToast("开始执行：" + (macro.name || macro.id) + "（" + steps.length + " 步）", true);
     macroCancelBtn.style.display = "";
     setMacroStatus("执行中 0/" + steps.length);   // STATUS_BAR_V1
@@ -2971,6 +2987,7 @@
 
     function finish(ok, cur, step, ms, extra) {
       macroRunning = false;
+      macroClock = null;
       macroCancelBtn.style.display = "none";
       setMacroStatus(ok ? "完成 " + cur + " 步" : ("失败于第 " + cur + " 步"));   // STATUS_BAR_V1
       var body = { action: step ? step.action : "done", ms: ms, final: true, result: ok ? "ok" : "failed" };
