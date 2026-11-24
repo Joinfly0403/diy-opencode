@@ -2236,6 +2236,12 @@
         si = si + 1;
       }
       if (litId != null) replaceInPayloads(si, litId, "{{site_id}}");
+      steps.splice(si, 0, {   // ASSERTSITE_V1：落库校验，抓 project_id/site_id 错配
+        action: "assertList", method: "POST",
+        endpoint: "/rest/ossdesign/v1/designer/querySiteLst",
+        payload: {}, from: "SiteList",
+        where: { id: "{{site_id}}", pid: "{{project_id}}" }
+      });
     }
     return steps;
   }
@@ -3072,6 +3078,27 @@
         }));
         return;
       }
+      if (step.action === "assertList") {   // ASSERT_LIST_V1
+        guard(macroApiCall({
+          method: step.method || "POST", endpoint: step.endpoint,
+          payload: step.payload || {}, headers: step.headers || {}
+        }, params, outputs).then(function (out) {
+          var data = (out && out.body !== undefined) ? out.body : out;
+          var arr = macroGetPath(data, step.from || "");
+          if (!Array.isArray(arr)) throw new Error("assertList 未拿到列表 " + (step.from || ""));
+          var want = macroDeepExpand(step.where || {}, params, outputs);
+          var found = arr.some(function (it) {
+            for (var k in want) {
+              if (!Object.prototype.hasOwnProperty.call(want, k)) continue;
+              if (String(it[k]) !== String(want[k])) return false;
+            }
+            return true;
+          });
+          if (!found) throw new Error("落库校验失败：列表里找不到 " + JSON.stringify(want));
+          done({ action: "assertList", endpoint: step.endpoint, ms: Date.now() - t0, res: JSON.stringify(want).slice(0, 160) });
+        }));
+        return;
+      }
       if (step.action === "lookup") {   // LOOKUP_V1：按名称查 id，解决"新建对象 id 未知"
         guard(macroApiCall({
           method: step.method || "POST", endpoint: step.endpoint,
@@ -3098,6 +3125,10 @@
           }
           if (!hit) throw new Error("lookup 未找到匹配项 " + JSON.stringify(want) + " @ " + step.endpoint);
           var picked = macroGetPath(hit, step.pick || "id");
+          var wantsNum = /_id$/.test(String(step.as || "")) || /_id$/.test(String(step.pick || ""));   // LOOKUP_NUMERIC_V1
+          if (wantsNum && (picked === undefined || picked === null || String(picked).trim() === "" || isNaN(Number(picked)))) {
+            throw new Error("lookup 得到非数字 id: " + JSON.stringify(picked) + "（as=" + step.as + "）");
+          }
           outputs[step.as || "lookup"] = picked;
           console.log("[macro-lookup] " + step.endpoint + " " + JSON.stringify(want) + " => " + step.as + "=" + picked);
           done({ action: "lookup", endpoint: step.endpoint, ms: Date.now() - t0, res: JSON.stringify(hit).slice(0, 200) });
