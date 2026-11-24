@@ -512,7 +512,7 @@ class Handler(BaseHTTPRequestHandler):
                     if rec0.get("result") != "running":
                         continue
                     touched = r0.get("touched") or r0.get("started") or now
-                    if now - touched < 60:   # STALE_RUN_V1
+                    if now - touched < 20:   # STALE_RUN_V1
                         continue
                     rec0["result"] = "failed"
                     rec0["failedStep"] = None
@@ -576,6 +576,9 @@ class Handler(BaseHTTPRequestHandler):
             body = self.body() if self.command == "POST" else {}
             rid = body.get("runId") or ""
             note = body.get("note") or "unspecified"
+            only_stale = bool(body.get("onlyStale"))
+            min_idle = float(body.get("minIdle") or 0)
+            now_ts = time.time()
             log("macro cancel requested: note=%s runId=%s" % (note, rid or "-"))
             released = []
             with MACRO_LOCK:
@@ -585,6 +588,10 @@ class Handler(BaseHTTPRequestHandler):
                     if rid and k != rid:
                         continue
                     rec = r.get("record") or {}
+                    if only_stale:
+                        touched = r.get("touched") or r.get("started") or 0
+                        if now_ts - touched < min_idle:
+                            continue
                     if rec.get("result") == "running":
                         rec["result"] = "cancelled"
                         rec["cancelNote"] = note

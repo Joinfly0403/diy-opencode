@@ -1773,9 +1773,17 @@
       .then(function (d) { macroToast("已开始执行：" + id + "（" + (d.runId || "") + "）", true); })
       .catch(function (e) {
         var msg = String(e.message || e);
-        if (msg.indexOf("macro_busy") >= 0 && tries < 15) {
-          setMacroStatus("上一轮仍在执行，等待中…（" + (tries + 1) + "/15）");
+        if (msg.indexOf("macro_busy") >= 0 && tries < 30) {
+          setMacroStatus("上一轮仍在执行，等待中…（" + (tries + 1) + "/30）");
+          if (tries % 5 === 4) {
+            api("/macro/cancel", { method: "POST", body: { onlyStale: true, minIdle: 10, note: "hud-stale-release" } }).catch(function () {});
+          }
           setTimeout(function () { runMacroById(id, tries + 1); }, 2000);
+          return;
+        }
+        if (msg.indexOf("macro_busy") >= 0) {
+          macroToast("仍被占用：点「■ 停止执行」可强制释放");
+          setMacroStatus("被占用（可点停止执行释放）");
           return;
         }
         macroToast("执行失败：" + msg);
