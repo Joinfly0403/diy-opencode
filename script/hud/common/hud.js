@@ -2171,7 +2171,9 @@
   }
 
   function recReplaceExact(v, target, repl) {
-    if (typeof v === "string") return v === target ? repl : v;
+    if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+      return String(v) === String(target) ? repl : v;   // REPLACE_SCALAR_V1
+    }
     if (Array.isArray(v)) return v.map(function (x) { return recReplaceExact(x, target, repl); });
     if (v && typeof v === "object") {
       var o = {};
@@ -2251,6 +2253,18 @@
         si = si + 1;
       }
       if (litId != null) replaceInPayloads(si, litId, "{{site_id}}");
+      var mi = -1;
+      for (var m2 = 0; m2 < steps.length; m2++) {
+        if (String(steps[m2].endpoint || "").indexOf("/modifySiteAttr") >= 0) { mi = m2; break; }
+      }
+      if (mi >= 0) {   // ASSERTSITEATTR_V1
+        steps.splice(mi + 1, 0, {
+          action: "assertField", method: "POST",
+          endpoint: "/rest/ossdesign/v1/designer/querySiteAttr",
+          payload: { site_id: "{{site_id}}" },
+          pick: "site.0.context", nonEmpty: true
+        });
+      }
       steps.splice(si, 0, {   // ASSERTSITE_V1：落库校验，抓 project_id/site_id 错配
         action: "assertList", method: "POST",
         endpoint: "/rest/ossdesign/v1/designer/querySiteLst",
@@ -2276,7 +2290,8 @@
           var path = leaves[li][0], val = leaves[li][1];
           if (typeof val !== "string" && typeof val !== "number") continue;
           var str = String(val);
-          if (str.length < 3) continue;
+          var isIdPath = /(^|\.)(id|pid|[A-Za-z_]+_id)$/i.test(String(path));   // CORRELATE_ID_V1
+          if (str.length < 3 && !isIdPath) continue;
           var ph = "{{s" + (i + 1) + "." + path + "}}";
           if (steps[k].payload) steps[k].payload = recReplaceExact(steps[k].payload, str, ph);
           if (steps[k].query) steps[k].query = recReplaceExact(steps[k].query, str, ph);
@@ -2293,7 +2308,7 @@
       if (!/\/rest\/ossdesign\/v1\/designer\//.test(u)) return false;
       if (/\/designer\/hud\//.test(u)) return false;   // REC_NET_SKIP_HUD_V1：排除 HUD 自身轮询
       if (r.method === "OPTIONS") return false;
-      if (/\/(querySiteParam|querySiteCusInfo|querySiteAttr|getStorageSpace|getDetailInfo|getRouteInfo_Net)(\?|$)/.test(u)) return false;   // REC_SKIP_DISPLAY_V1
+      if (/\/(querySiteParam|querySiteCusInfo|getStorageSpace|getDetailInfo|getRouteInfo_Net)(\?|$)/.test(u)) return false;   // REC_SKIP_DISPLAY_V1
       return true;
     });
     rows.forEach(function (r) {
@@ -3095,6 +3110,22 @@
       if (step.action === "wait") {
         guard(macroWait(step.for || {}, step.timeout).then(function () {
           done({ action: "wait", ms: Date.now() - t0 });
+        }));
+        return;
+      }
+      if (step.action === "assertField") {   // ASSERT_FIELD_V1：校验某字段已落库且非空
+        guard(macroApiCall({
+          method: step.method || "POST", endpoint: step.endpoint,
+          payload: step.payload || {}, headers: step.headers || {}
+        }, params, outputs).then(function (out) {
+          var data = (out && out.body !== undefined) ? out.body : out;
+          var val = macroGetPath(data, step.pick || "");
+          var empty = (val === undefined || val === null || String(val).trim() === "" || String(val) === "{}" || String(val) === "[]");
+          if (step.nonEmpty && empty) throw new Error("落库校验失败：" + (step.endpoint || "") + " 的 " + (step.pick || "") + " 为空");
+          if (step.equals !== undefined && String(val) !== String(macroDeepExpand(step.equals, params, outputs))) {
+            throw new Error("落库校验失败：" + (step.pick || "") + " 期望 " + step.equals + " 实际 " + val);
+          }
+          done({ action: "assertField", endpoint: step.endpoint, ms: Date.now() - t0, res: String(val).slice(0, 120) });
         }));
         return;
       }
