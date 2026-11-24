@@ -2191,6 +2191,51 @@
     return v;
   }
 
+  function recExistingSites(steps) {   // EXISTING_SITE_V1
+    var idToName = {};
+    steps.forEach(function (st) {
+      if (String(st.endpoint || "").indexOf("querySiteLst") < 0) return;
+      var list = st.__respObj && st.__respObj.SiteList;
+      if (!Array.isArray(list)) return;
+      list.forEach(function (it) { idToName[String(it.id)] = it.text; });
+    });
+    var createSite = null;
+    steps.forEach(function (st) { if (String(st.endpoint || "").indexOf("/createSite") >= 0) createSite = st; });
+    var newId = createSite && createSite.__respObj ? String(createSite.__respObj.id) : null;
+    var wanted = {};   // name -> placeholder
+    var order = [];
+    steps.forEach(function (st) {
+      var pl = st.payload;
+      if (!pl || typeof pl !== "object" || pl.site_id == null) return;
+      var sid = String(pl.site_id);
+      if (sid.indexOf("{{") >= 0) return;
+      if (newId && sid === newId) return;   // 新建站点，保持 {{site_id}} 逻辑
+      var name = idToName[sid];
+      if (!name) return;
+      var ph = wanted[name];
+      if (!ph) {
+        ph = "target_site_id" + (order.length ? String(order.length + 1) : "");
+        wanted[name] = ph;
+        order.push({ name: name, ph: ph });
+      }
+      pl.site_id = "{{" + ph + "}}";
+    });
+    if (!order.length) {
+      steps.forEach(function (st) { delete st.__respObj; });
+      return steps;
+    }
+    var lookups = order.map(function (o, i) {
+      return {
+        action: "lookup", method: "POST",
+        endpoint: "/rest/ossdesign/v1/designer/querySiteLst",
+        payload: {}, from: "SiteList",
+        where: { text: o.name }, pick: "id", as: o.ph
+      };
+    });
+    steps.forEach(function (st) { delete st.__respObj; });
+    return lookups.concat(steps);   // 放在最前面：先解析已有站点 id
+  }
+
   function recSyncLookupNames(steps) {   // LOOKUP_NAME_SYNC_V1
     var prjName = null, siteName = null;
     steps.forEach(function (st) {
@@ -2341,6 +2386,7 @@
       if (r.roarand) step.headers = { roarand: r.roarand };
       step.__resp = r.resp || "";
       try { step.__respId = (JSON.parse(r.resp || "{}").id != null); } catch (e) { step.__respId = false; }
+      try { step.__respObj = JSON.parse(r.resp || "null"); } catch (e) { step.__respObj = null; }
       steps.push(step);
     });
     return steps;
@@ -2497,6 +2543,7 @@
       apiSteps = recCorrelate(apiSteps);
       // 3) 自动插入 lookup（project_id / site_id）
       apiSteps = recAutoLookup(apiSteps);
+      apiSteps = recExistingSites(apiSteps);   // EXISTING_SITE_V1
       // 4) 双保险：lookup 的匹配名同步为最终 payload 值
       apiSteps = recSyncLookupNames(apiSteps);
       apiSteps.push({ action: "reload" });   // RELOAD_V1：接口执行完刷新前台数据
