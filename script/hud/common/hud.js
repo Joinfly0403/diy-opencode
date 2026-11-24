@@ -2946,7 +2946,8 @@
         try { body = t ? JSON.parse(t) : {}; } catch (e) { body = t; }
         var snippet = String(t).replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 300);
         if (!r.ok) {
-          throw new Error("API " + method + " " + step.endpoint + " -> " + r.status + ": " + (snippet || "(空响应)"));
+          var reqPart = init.body ? (" | req=" + String(init.body).slice(0, 400)) : (" | req=" + (url || "").slice(0, 200));
+          throw new Error("API " + method + " " + step.endpoint + " -> " + r.status + ": " + (snippet || "(空响应)") + reqPart);   // ERR_REQ_V1
         }
         // API_BIZ_V2：OSSDesign 用 retMsg 表达业务成败（OK / NA / ERROR / Error）
         if (body && typeof body === "object" && body.retMsg !== undefined) {
