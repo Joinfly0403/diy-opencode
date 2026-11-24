@@ -2181,6 +2181,21 @@
     return v;
   }
 
+  function recSyncLookupNames(steps) {   // LOOKUP_NAME_SYNC_V1
+    var prjName = null, siteName = null;
+    steps.forEach(function (st) {
+      var ep = String(st.endpoint || "");
+      if (ep.indexOf("/createPrj") >= 0 && st.payload) prjName = st.payload.project_name;
+      if (ep.indexOf("/createSite") >= 0 && st.payload) siteName = st.payload.site_name;
+    });
+    steps.forEach(function (st) {
+      if (st.action !== "lookup" || !st.where) return;
+      if (st.as === "project_id" && prjName) st.where.text = prjName;
+      if (st.as === "site_id" && siteName) { st.where.text = siteName; st.where.pid = "{{project_id}}"; }
+    });
+    return steps;
+  }
+
   function recAutoLookup(steps) {   // REC_LOOKUP_V1
     var createPrj = null, createSite = null;
     steps.forEach(function (st) {
@@ -2442,9 +2457,7 @@
     var apiSteps = [];
     try { apiSteps = recApiSteps(); } catch (err) { apiSteps = []; }
     if (apiSteps.length) {   // REC_NET_V1：有接口流量就保存接口动作
-      apiSteps = recCorrelate(apiSteps);
-      apiSteps = recAutoLookup(apiSteps);   // REC_LOOKUP_V1
-      apiSteps.push({ action: "reload" });   // RELOAD_V1：接口执行完刷新前台数据   // CORRELATE_V1：把上一步响应里的 id 变成占位符
+      // 1) 名称先加时间戳（必须在 lookup 生成之前）
       apiSteps.forEach(function (st) {
         var pl = st.payload;
         if (pl && typeof pl === "object" && !Array.isArray(pl)) {
@@ -2457,6 +2470,13 @@
           });
         }
       });
+      // 2) 用响应里的 id 做占位符关联
+      apiSteps = recCorrelate(apiSteps);
+      // 3) 自动插入 lookup（project_id / site_id）
+      apiSteps = recAutoLookup(apiSteps);
+      // 4) 双保险：lookup 的匹配名同步为最终 payload 值
+      apiSteps = recSyncLookupNames(apiSteps);
+      apiSteps.push({ action: "reload" });   // RELOAD_V1：接口执行完刷新前台数据
       recSteps = apiSteps;
     }
 
