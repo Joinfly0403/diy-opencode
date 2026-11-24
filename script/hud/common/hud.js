@@ -2928,15 +2928,36 @@
     return out;
   }
 
-  function macroGetPath(obj, pathStr) {   // API_V2
+  function macroGetPath(obj, pathStr) {   // API_V3：支持 Products[0].product 这种下标路径
     if (!pathStr) return obj;
     var cur = obj;
-    var parts = String(pathStr).split(".");
-    for (var i = 0; i < parts.length; i++) {
+    var raw = String(pathStr);
+    var tokens = [];
+    raw.replace(/([^\[\].]+)|\[(\d+)\]/g, function (m, name, idx) {
+      if (name !== undefined) tokens.push(name);
+      else tokens.push(Number(idx));
+      return m;
+    });
+    for (var i = 0; i < tokens.length; i++) {
       if (cur == null) return undefined;
-      cur = cur[parts[i]];
+      cur = cur[tokens[i]];
     }
     return cur;
+  }
+
+  function macroUnresolved(v, path) {   // UNRESOLVED_V1
+    var hit = [];
+    (function walk(x, p) {
+      if (typeof x === "string") {
+        var m = x.match(/\{\{s\d+\.[^}]+\}\}/g) || x.match(/\{\{[A-Za-z0-9_]+\.[A-Za-z0-9_.\[\]]+\}\}/g);
+        if (m) hit.push({ where: p, ph: m[0] });
+      } else if (Array.isArray(x)) {
+        x.forEach(function (y, i) { walk(y, p + "[" + i + "]"); });
+      } else if (x && typeof x === "object") {
+        Object.keys(x).forEach(function (k) { walk(x[k], p ? p + "." + k : k); });
+      }
+    })(v, path || "");
+    return hit;
   }
 
   function macroDeepExpand(v, params, outputs) {
@@ -2965,7 +2986,7 @@
     return v;
   }
 
-  function macroApiCall(step, params, outputs) {
+  function macroApiCall(step, params, outputs) {   // API_V4：未解析占位符直接报错
     var headers = { "Content-Type": "application/json" };
     var extra = step.headers || {};
     for (var hk in extra) { if (Object.prototype.hasOwnProperty.call(extra, hk)) headers[hk] = extra[hk]; }
@@ -2982,6 +3003,10 @@
     }
     if (pairs.length) url += (url.indexOf("?") >= 0 ? "&" : "?") + pairs.join("&");
 
+    var unresolved = macroUnresolved(payload, "").concat(macroUnresolved(query, ""));
+    if (unresolved.length) {
+      throw new Error("占位符未解析：" + unresolved.map(function (u) { return u.ph; }).join(", ") + " @ " + (step.endpoint || ""));
+    }
     var init = { method: method, credentials: "same-origin", headers: headers };
     if (method !== "GET" && method !== "HEAD") {
       init.body = typeof payload === "string" ? payload : JSON.stringify(payload);
