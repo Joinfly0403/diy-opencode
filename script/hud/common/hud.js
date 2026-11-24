@@ -2224,13 +2224,18 @@
         var pl = steps[k].payload;
         if (pl && typeof pl === "object" && pl.site_id != null) { litId = pl.site_id; break; }
       }
-      steps.splice(si, 0, {
-        action: "lookup", method: "POST",
-        endpoint: "/rest/ossdesign/v1/designer/querySiteLst",
-        payload: {}, from: "SiteList",
-        where: { text: siteName, pid: "{{project_id}}" }, pick: "id", as: "site_id"
-      });
-      if (litId != null) replaceInPayloads(si + 1, litId, "{{site_id}}");
+      if (createSite.__respId) {
+        createSite.save = { site_id: "id" };   // createSite 响应直接带 id
+      } else {
+        steps.splice(si, 0, {
+          action: "lookup", method: "POST",
+          endpoint: "/rest/ossdesign/v1/designer/querySiteLst",
+          payload: {}, from: "SiteList",
+          where: { text: siteName, pid: "{{project_id}}" }, pick: "id", as: "site_id"
+        });
+        si = si + 1;
+      }
+      if (litId != null) replaceInPayloads(si, litId, "{{site_id}}");
     }
     return steps;
   }
@@ -2267,6 +2272,7 @@
       if (!/\/rest\/ossdesign\/v1\/designer\//.test(u)) return false;
       if (/\/designer\/hud\//.test(u)) return false;   // REC_NET_SKIP_HUD_V1：排除 HUD 自身轮询
       if (r.method === "OPTIONS") return false;
+      if (/\/(querySiteParam|querySiteCusInfo|querySiteAttr|getStorageSpace|getDetailInfo|getRouteInfo_Net)(\?|$)/.test(u)) return false;   // REC_SKIP_DISPLAY_V1
       return true;
     });
     rows.forEach(function (r) {
@@ -2290,6 +2296,7 @@
       }
       if (r.roarand) step.headers = { roarand: r.roarand };
       step.__resp = r.resp || "";
+      try { step.__respId = (JSON.parse(r.resp || "{}").id != null); } catch (e) { step.__respId = false; }
       steps.push(step);
     });
     return steps;
@@ -2877,15 +2884,22 @@
         if (!r.ok) {
           throw new Error("API " + method + " " + step.endpoint + " -> " + r.status + ": " + (snippet || "(空响应)"));
         }
-        // API_BIZ_V1：HTTP 200 但业务失败
-        if (body && typeof body === "object") {
+        // API_BIZ_V2：OSSDesign 用 retMsg 表达业务成败（OK / NA / ERROR / Error）
+        if (body && typeof body === "object" && body.retMsg !== undefined) {
+          var ret = String(body.retMsg);
+          var isOk = (ret === "OK") || (ret === "NA");
+          if (!isOk) {
+            throw new Error("API " + method + " " + step.endpoint + " 业务失败 retMsg=" + ret + " " +
+              (body.errorMsg || body.errMsg || "") + " | " + snippet.slice(0, 120));
+          }
+        } else if (body && typeof body === "object") {
           var codeVal = body.code !== undefined ? body.code : (body.retCode !== undefined ? body.retCode : body.status);
           var okFlag = (body.success !== undefined) ? body.success : (body.ok !== undefined ? body.ok : undefined);
           var bizBad = (codeVal !== undefined && String(codeVal) !== "0" && String(codeVal) !== "200" && String(codeVal).toLowerCase() !== "ok")
             || okFlag === false;
           if (bizBad) {
             var msg = body.message || body.msg || body.messageText || body.desc || "";
-            throw new Error("API " + method + " " + step.endpoint + " 业务失败 code=" + codeVal + " " + msg + " | " + snippet.slice(0, 120));
+            throw new Error("API " + method + " " + step.endpoint + " 业务失败 code=" + codeVal + " " + msg);
           }
         }
         return { body: body, req: reqStr, status: r.status };
