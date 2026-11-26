@@ -1,5 +1,8 @@
 # HUD 接入：当前状态与恢复手册
 
+> **恢复步骤仍有效；录制/回放实现细节已过时。**
+> 以 [docs/design/hud-implementation.md](design/hud-implementation.md) 为准。
+
 > 更新时间：2026-11-18
 > 用途：记录已经**实测可用**的代码与部署状态；OSSDesign 重装后照第 4 节恢复即可。
 > 约定：每条命令都标注执行用户。改 OSSDesign 自身代码必须先读源码，不猜。

@@ -1,5 +1,15 @@
 # HUD 动作工具栏 + AI 协作设计
 
+> **本文是早期设计稿（2026-11 上旬），部分内容已与实现不一致。**
+> 实现以 [docs/design/hud-implementation.md](hud-implementation.md) 为准。
+>
+> 与本文的主要差异：
+> - 动作新增 lookup / assertList / assertField / reload；
+> - 占位符新增 shortstamp（12 位含秒、执行内冻结）、project_id / site_id / target_site_id，并支持数组下标（如 s13.Products[0].product）；
+> - 录制默认走"接口录制"（api + lookup + 断言），UI 动作作为回退；
+> - 宏步骤上限 50、每 owner 200 个；
+> - AI 自学习工具（hud_probe / hud_resolve / hud_verify / hud_pin_list）尚未实现。
+
 > 目标：把页面上要反复点的一串操作沉淀为**动作**，在悬浮窗里以**工具栏**呈现；
 > **用户点一下就执行**，AI 能**看到执行过程、也能自己调用**，还能**新建/修改/删除**动作。
 > 关联文档：docs/design/cdp-browser-control.md（CDP 跨标签方案，本文只覆盖 HUD 页面代理）。
