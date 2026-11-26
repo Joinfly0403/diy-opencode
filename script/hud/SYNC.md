@@ -1,6 +1,7 @@
 # 服务器 ↔ 仓库 同步说明
 
 > 原则：**线上跑的文件 = 仓库里的文件（逐字节一致）**。不靠"重新打补丁"，靠原样导出。
+> 技术细节：[docs/design/hud-implementation.md](../../docs/design/hud-implementation.md)；安装/排障：[README.md](README.md)。
 
 ## 一、从服务器导出到仓库（每次线上改动后必做）
 
@@ -8,7 +9,10 @@
 
 ```bash
 APP_ROOT=$(readlink -f /opt/cloud/manager/apps/OSSDesignService)
-D="$APP_ROOT/webapps/ossdesignwebsite/plugin/hud"
+W="$APP_ROOT/webapps/ossdesignwebsite/osmuwebsite_app"
+# 线上实际加载的文件名从 app_main.js 的 bootstrap 里取（历史上曾在 plugin/hud 下）
+HUD_NAME=$(grep -o "hud[^\"]*\.js" "$W/app_main.js" | sort -u | head -1)
+D="$W"
 P="$APP_ROOT/pyscript/ossdesign/interface/hud_proxy.py"
 B=/opt/cloud/manager/tools/cogagent-hud
 
@@ -16,7 +20,7 @@ S=/tmp/hudsync; rm -rf "$S"; mkdir -p "$S"
 cp -f "$B/broker.py"     "$S/broker.py"
 cp -f "$B/recover.sh"    "$S/recover.sh"
 cp -f "$P"               "$S/hud_proxy.py"
-cp -f "$D/hud.vNN.js"    "$S/hud.js"          # 换成当前线上版本号
+cp -f "$D/$HUD_NAME"     "$S/hud.js"          # 文件名由 bootstrap 决定
 cp -f "$APP_ROOT/pyscript/ossdiyservice.py" "$S/ossdiyservice.py"
 cd "$S" && tar czf /tmp/hud-sync.tgz .
 sha256sum /tmp/hud-sync.tgz
