@@ -1,37 +1,72 @@
 {
-  "generatedAt": "2026-11-18T20:45:00+08:00",
-  "liveVersion": "hud.v59.js",
-  "note": "由服务器原样导出（script/hud/server/），部署用 deploy.sh；每次线上改动后必须重新导出并更新本文件。",
+  "generatedAt": "2026-11-26T15:26:23+08:00",
+  "note": "HUD 运行时文件清单。hud.js 的线上文件名由 app_main.js 的 bootstrap 决定；安装脚本按内容匹配最新文件。",
   "files": [
     {
       "name": "broker.py",
-      "size": 23653,
-      "sha256": "f857343b8f56d6c7f40defd15c795358bb2186dc2a88364567cda6c86c73b132",
+      "size": 40254,
+      "sha256": "7fedb2db7fa2b67a827fb8381f07c5f43b6980fa12216329b548a85d437fcc9d",
       "serverPath": "/opt/cloud/manager/tools/cogagent-hud/broker.py"
     },
     {
+      "name": "macro_store.py",
+      "size": 13095,
+      "sha256": "afcae1fd5a138297af319ebffde15cd80c4a1f51059901a8c3295f3368d1591c",
+      "serverPath": "/opt/cloud/manager/tools/cogagent-hud/macro_store.py"
+    },
+    {
       "name": "hud_proxy.py",
-      "size": 7253,
-      "sha256": "07a0af25b303fde0e3fc95d4151a54c90755cccd178c59975238feeeff113d2b",
-      "serverPath": "/opt/cloud/manager/apps/OSSDesignService/pyscript/ossdesign/interface/hud_proxy.py"
+      "size": 8369,
+      "sha256": "7cf001df4680a57bf28b56e1abbba67ea54c8f66fea3b825f0325612712f39b7",
+      "serverPath": "<OSSDesign>/pyscript/ossdesign/interface/hud_proxy.py"
+    },
+    {
+      "name": "hud_register.py",
+      "size": 5165,
+      "sha256": "07dd35ad535ce9549f75b581bbfaa545690a5ccb56e0aa83a66cb86c6c94fc20",
+      "serverPath": "<OSSDesign>/pyscript/ossdesign/interface/hud_register.py"
     },
     {
       "name": "hud.js",
-      "size": 61024,
-      "sha256": "e2163227a9d78c428987717c60bbe0e128b9d3ed5d229df92e8133a42fd476a5",
-      "serverPath": "/opt/cloud/manager/apps/OSSDesignService/webapps/ossdesignwebsite/plugin/hud/hud.v59.js"
+      "size": 146722,
+      "sha256": "ed147a52e8990d94a52056b025e093f444574df56d9aa2f6c4aa4865ddae45bf",
+      "serverPath": "<OSSDesign>/webapps/ossdesignwebsite/osmuwebsite_app/hud.<bootstrap>.js"
+    },
+    {
+      "name": "install-all.sh",
+      "size": 10758,
+      "sha256": "fb60dfa0a5cb0a76d5504c7f17aca48cc2ec9043528bbf2b9f50fcd0b16da184",
+      "serverPath": "/opt/cloud/manager/tools/cogagent-hud/install-all.sh"
+    },
+    {
+      "name": "deploy.sh",
+      "size": 5585,
+      "sha256": "0d541f6360e1bcbbacda3e867807ec0bbb522707ccca9b4ab892ba88dc43a37b",
+      "serverPath": "/opt/cloud/manager/tools/cogagent-hud/deploy.sh"
     },
     {
       "name": "recover.sh",
-      "size": 7919,
-      "sha256": "25ab3363bac076cd32b7662511e53c6a0ff45ef13a7920406fd3510fa63833de",
+      "size": 7972,
+      "sha256": "55d01c8a8034e78c20d8a9d14a9c874cb04fa13f1973bf7469410a420ca4db2d",
       "serverPath": "/opt/cloud/manager/tools/cogagent-hud/recover.sh"
     },
     {
-      "name": "ossdiyservice.py",
-      "size": 3445,
-      "sha256": "8f47db5be8bb480de692ec879a982500d24e1ef63f20299c4a069bbe5817d361",
-      "serverPath": "/opt/cloud/manager/apps/OSSDesignService/pyscript/ossdiyservice.py"
+      "name": "restore.sh",
+      "size": 2680,
+      "sha256": "29f249b504f96d21d248b17152e3af0faa99482bd1c7fa77b1159448a76ea355",
+      "serverPath": "/opt/cloud/manager/tools/cogagent-hud/restore.sh"
+    },
+    {
+      "name": "uninstall-all.sh",
+      "size": 5964,
+      "sha256": "e9adaab2cbd1381aab2fca253bf0e58d53ee14a8084ff09fbdcdd83725c328be",
+      "serverPath": "/opt/cloud/manager/tools/cogagent-hud/uninstall-all.sh"
+    },
+    {
+      "name": "cogagent-hud-broker.service",
+      "size": 432,
+      "sha256": "2483000dcb6f2631cba115f9183299058e8e443a7d690e43237be97a9933ef22",
+      "serverPath": "/etc/systemd/system/cogagent-hud-broker.service"
     }
   ]
 }
