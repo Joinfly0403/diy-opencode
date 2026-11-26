@@ -6,7 +6,8 @@
 
 | 文档 | 内容 | 状态 |
 |---|---|---|
-| [architecture.md](architecture.md) | **全仓技术架构**：定位、包分层、运行时拓扑、会话执行链路、事件/存储、Server/协议、TUI、插件、配置/flag、工程流程、关键文件地图 | 现行 |
+| [cogagent-changes.md](cogagent-changes.md) | **本仓库自 opencode 基线以来的开发内容**：Linux-only 收敛、品牌改名、CAC 登录与安装、权限 bypass、TUI 中文化/重绘、Provider 精简、HUD、知识库、工程约定 | 现行（主文档） |
+| [architecture.md](architecture.md) | 上游骨架参考（包分层、会话链路、Server/协议等），**不是本仓库开发内容** | 参考 |
 | [knowledge/index.md](knowledge/index.md) | 模块检索索引（42 张卡，覆盖 1684 个源文件），按分层/目录/符号定位代码 | 由 `bun run knowledge` 生成 |
 | [knowledge/README.md](knowledge/README.md) | 知识库自身的使用与维护说明 | 现行 |
 
